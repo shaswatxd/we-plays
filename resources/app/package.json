@@ -1,86 +1,29 @@
 {
   "name": "we-plays",
-  "version": "1.0.0",
-  "main": "src/main/index.js",
+  "version": "2.0.0",
+  "private": true,
   "description": "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
   "author": "SHASWATTTT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "push": "powershell -ExecutionPolicy Bypass -File \"..\\..\\push.ps1\""
   },
   "dependencies": {
-    "electron-store": "^8.1.0",
-    "ffmpeg-static": "^5.2.0",
+    "@tauri-apps/api": "^2.6.0",
     "howler": "^2.2.4",
     "lucide-react": "^1.18.0",
-    "node-id3": "^0.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "sql.js": "^1.10.3",
     "zustand": "^4.5.0"
   },
-  "allowScripts": {
-    "electron": true,
-    "esbuild": true,
-    "ffmpeg-static": true
-  },
-  "build": {
-    "appId": "com.weplays.app",
-    "productName": "We Plays",
-    "compression": "maximum",
-    "directories": {
-      "output": "../../dist_installer"
-    },
-    "files": [
-      "src/**/*",
-      "dist/**/*",
-      "index.html",
-      "package.json",
-      "assets/**/*",
-      "!node_modules/.cache/**",
-      "!**/*.map",
-      "!**/dxcompiler.dll",
-      "!**/dxil.dll"
-    ],
-    "asarUnpack": [
-      "**/node_modules/ffmpeg-static/**",
-      "**/node_modules/sql.js/**"
-    ],
-    "extraResources": [
-      {
-        "from": "assets/binaries/yt-dlp.exe",
-        "to": "binaries/yt-dlp.exe"
-      }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ],
-      "artifactName": "WePlays-${version}-Setup.${ext}",
-      "requestedExecutionLevel": "requireAdministrator"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "We Plays",
-      "deleteAppDataOnUninstall": false,
-      "unicode": true
-    }
-  },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.6.0",
     "@vitejs/plugin-react": "^6.0.2",
-    "electron": "^42.4.0",
-    "electron-builder": "^26.0.12",
+    "esbuild": "^0.28.1",
     "vite": "^8.0.16"
   }
 }
