@@ -1,6 +1,6 @@
 {
     "name":  "we-plays",
-    "version":  "2.0.9",
+    "version":  "2.0.10",
     "main":  "src/main/index.js",
     "description":  "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
     "author":  "SHASWATTTT",
@@ -73,13 +73,13 @@
                   "win":  {
                               "icon":  "assets/icons/icon.png",
                               "target":  [
-                                              {
-                                                  "target":  "nsis",
-                                                  "arch":  [
-                                                               "x64"
-                                                           ]
-                                              }
-                                          ],
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
                               "artifactName":  "WePlays-${version}-Setup.${ext}"
                           },
                   "nsis":  {
