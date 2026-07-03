@@ -559,8 +559,8 @@ function setupIpcHandlers(mainWindow, store) {
 
       // Launch the NSIS installer and quit the app after it starts
       const { spawn } = require('child_process');
-      const child = spawn('"' + destPath + '"', [], {
-        shell: true,
+      const child = spawn(destPath, [], {
+        shell: false,
         detached: true,
         windowsHide: false,
         stdio: 'ignore'
@@ -627,16 +627,43 @@ function isNewerVersion(current, latest) {
 
 function downloadFile(url, destPath, progressCallback) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    function done(err) {
+      if (settled) return;
+      settled = true;
+      if (err) {
+        fs.unlink(destPath, () => {});
+        reject(err);
+      } else {
+        resolve();
+      }
+    }
+
     const file = fs.createWriteStream(destPath);
-    
-    function getUrl(targetUrl) {
-      https.get(targetUrl, { headers: { 'User-Agent': 'we-plays-updater' } }, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          getUrl(res.headers.location);
+    file.on('error', (err) => done(err));
+
+    function getUrl(targetUrl, redirects) {
+      if (redirects > 10) {
+        done(new Error('Too many redirects while downloading update'));
+        return;
+      }
+      const isHttps = targetUrl.startsWith('https');
+      const lib = isHttps ? https : http;
+      lib.get(targetUrl, { headers: { 'User-Agent': 'we-plays-updater' } }, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) {
+          // Must consume redirect response body to free the socket
+          res.resume();
+          const location = res.headers.location;
+          if (!location) {
+            done(new Error('Redirect with no Location header'));
+            return;
+          }
+          getUrl(location, redirects + 1);
           return;
         }
         if (res.statusCode !== 200) {
-          reject(new Error(`Failed to download update: Status Code ${res.statusCode}`));
+          res.resume();
+          done(new Error(`Failed to download update: Status Code ${res.statusCode}`));
           return;
         }
 
@@ -654,16 +681,14 @@ function downloadFile(url, destPath, progressCallback) {
         res.pipe(file);
 
         file.on('finish', () => {
-          file.close();
-          resolve();
+          file.close(() => done(null));
         });
-      }).on('error', (err) => {
-        fs.unlink(destPath, () => {});
-        reject(err);
-      });
+
+        res.on('error', (err) => done(err));
+      }).on('error', (err) => done(err));
     }
 
-    getUrl(url);
+    getUrl(url, 0);
   });
 }
 
