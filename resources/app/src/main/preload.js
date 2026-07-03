@@ -148,7 +148,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Auto-Updater
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkAppUpdate: () => ipcRenderer.invoke('check-app-update'),
-  installAppUpdate: (downloadUrl) => ipcRenderer.invoke('install-app-update'),
+  installAppUpdate: (downloadUrl) => ipcRenderer.invoke('install-app-update', downloadUrl),
   onUpdateProgress: (callback) => {
     const fn = (event, percent) => callback(percent);
     ipcRenderer.on('update-progress', fn);

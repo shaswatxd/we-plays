@@ -538,29 +538,44 @@ function setupIpcHandlers(mainWindow, store) {
   });
 
   ipcMain.handle('install-app-update', async (event, downloadUrl) => {
+    if (!downloadUrl) {
+      throw new Error('No download URL provided for update');
+    }
     try {
       const destPath = path.join(app.getPath('temp'), 'WePlays-Setup-Update.exe');
-      
+
       // Delete old installer if it exists
       if (fs.existsSync(destPath)) {
         try { fs.unlinkSync(destPath); } catch (_) {}
       }
 
       await downloadFile(downloadUrl, destPath, (percent) => {
-        mainWindow.webContents.send('update-progress', percent);
+        mainWindow.webContents.send('update-progress', Math.max(0, Math.min(100, percent)));
       });
 
-      // Spawn installer and quit app
+      if (!fs.existsSync(destPath)) {
+        throw new Error('Update installer failed to download');
+      }
+
+      // Launch the NSIS installer and quit the app after it starts
       const { spawn } = require('child_process');
-      const child = spawn(destPath, [], {
+      const child = spawn('"' + destPath + '"', [], {
+        shell: true,
         detached: true,
+        windowsHide: false,
         stdio: 'ignore'
       });
+      child.on('error', (err) => {
+        console.error('Failed to launch installer:', err);
+      });
       child.unref();
+
+      // Give the installer time to fully detach before quitting
+      await new Promise(resolve => setTimeout(resolve, 2000));
       app.quit();
       return true;
     } catch (err) {
-      throw new Error(err.message);
+      throw new Error(err?.message || String(err));
     }
   });
 }

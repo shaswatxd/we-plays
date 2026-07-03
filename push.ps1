@@ -80,6 +80,20 @@ try {
 } catch { Write-Host "No website changes" -ForegroundColor DarkGray }
 Pop-Location
 
+Write-Host "`n[5/5] Bumping version for next release..." -ForegroundColor Yellow
+$parts = $VERSION -split '\.'
+$parts[2] = [int]$parts[2] + 1
+$NEW_VERSION = $parts -join '.'
+$pkg.version = $NEW_VERSION
+$pkg | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $APP "package.json") -Encoding UTF8
+Push-Location $ROOT
+try {
+    git add -A
+    git commit -m "v$NEW_VERSION bump" 2>$null
+} catch {}
+Pop-Location
+Write-Host "  Version bumped: $VERSION -> $NEW_VERSION" -ForegroundColor Green
+
 Write-Host "`nDone!" -ForegroundColor Green
 Write-Host "  Release: https://github.com/$REPO/releases/tag/$TAG" -ForegroundColor White
 Write-Host "  Website: https://website-nine-tau-67.vercel.app" -ForegroundColor White
