@@ -33,6 +33,7 @@ export default function App() {
   const [toast,      setToast]      = useState(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [missingBins, setMissingBins] = useState(null); // { ytdlp: bool, ffmpeg: bool }
   const toastRef = React.useRef(null);
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
@@ -41,6 +42,19 @@ export default function App() {
     loadLibrary();
     loadPlaylists();
     loadSettings();
+    // Check if yt-dlp / ffmpeg are available
+    if (window.electronAPI?.getYtdlpVersion && window.electronAPI?.getFfmpegPath) {
+      Promise.all([
+        window.electronAPI.getYtdlpVersion().catch(() => null),
+        window.electronAPI.getFfmpegPath().catch(() => null)
+      ]).then(([ytdlp, ffmpeg]) => {
+        const missingYt = !ytdlp || ytdlp === 'Not installed' || ytdlp === 'Unknown';
+        const missingFf = !ffmpeg || ffmpeg === 'Not found';
+        if (missingYt || missingFf) {
+          setMissingBins({ ytdlp: missingYt, ffmpeg: missingFf });
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -187,6 +201,78 @@ export default function App() {
           {toast.msg}
         </div>
       )}
+
+      {/* Missing Dependencies Modal */}
+      {missingBins && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: '#161616', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 16, padding: '32px 36px', maxWidth: 480, width: '90%',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.6)', position: 'relative'
+          }}>
+            <button
+              onClick={() => setMissingBins(null)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}
+            >✕</button>
+
+            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: 17, color: '#fff', fontWeight: 700 }}>
+              Missing Dependencies
+            </h2>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#999', lineHeight: 1.6 }}>
+              The downloader won't work because the following tools are missing:
+            </p>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+              {missingBins.ytdlp && (
+                <span style={{ background: 'rgba(241,94,108,0.15)', border: '1px solid rgba(241,94,108,0.4)', color: '#f15e6c', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                  ✕ yt-dlp not found
+                </span>
+              )}
+              {missingBins.ffmpeg && (
+                <span style={{ background: 'rgba(241,94,108,0.15)', border: '1px solid rgba(241,94,108,0.4)', color: '#f15e6c', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                  ✕ FFmpeg not found
+                </span>
+              )}
+            </div>
+
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#aaa', lineHeight: 1.6 }}>
+              Download and run <strong style={{ color: '#fff' }}>install-deps.bat</strong> from our website. It will automatically install yt-dlp &amp; FFmpeg and add them to your system PATH.
+            </p>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <a
+                href="https://website-nine-tau-67.vercel.app/#dependencies"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: '#1db954', color: '#000', fontWeight: 700,
+                  fontSize: 13, padding: '10px 20px', borderRadius: 10,
+                  textDecoration: 'none', cursor: 'pointer'
+                }}
+              >
+                ↗ Go to Website & Download
+              </a>
+              <button
+                onClick={() => setMissingBins(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#aaa', fontWeight: 600, fontSize: 13,
+                  padding: '10px 20px', borderRadius: 10, cursor: 'pointer'
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

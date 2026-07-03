@@ -152,11 +152,11 @@ try {
     if ($changes) {
         git add .
         git commit -m "v$VERSION website update" 2>$null | Out-Null
-        git push origin master:main 2>$null | Out-Null
-        Write-Ok "Website pushed  ($(Get-Elapsed $sw))"
-    } else {
-        Write-Info "No website changes to push"
     }
+    # Push to both master and master:main (Vercel may track either)
+    git -c "credential.helper=!gh auth git-credential" push origin master 2>$null | Out-Null
+    git -c "credential.helper=!gh auth git-credential" push origin master:main 2>$null | Out-Null
+    Write-Ok "Website pushed  ($(Get-Elapsed $sw))"
 } catch {
     Write-Info "Website push skipped"
 } finally { Pop-Location }
