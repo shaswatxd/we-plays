@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
 import { Disc3, Play, Shuffle, Music } from 'lucide-react';
+import SpSongRow from './SpSongRow';
 
 function hslFromStr(str) {
   let hash = 0;
@@ -80,32 +81,14 @@ function AlbumDetail({ album, songs, onBack }) {
           <span>Artist</span>
           <span style={{ textAlign:'right' }}>Duration</span>
         </div>
-        {songs.map((s, i) => {
-          const { currentSong, isPlaying } = usePlayerStore.getState();
-          const isActive = currentSong?.id === s.id;
-          return (
-            <div
-              key={s.id}
-              className={`sp-song-row${isActive ? ' active' : ''}`}
-              onClick={() => playPlaylist(songs, i)}
-            >
-              <div className="sp-row-num-cell">
-                {isActive && isPlaying
-                  ? <div className="eq-bars"><span/><span/><span/></div>
-                  : <span className="sp-row-num">{i+1}</span>
-                }
-              </div>
-              <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-                {s.thumbnail && <img src={s.thumbnail} alt="" style={{ width:36,height:36,borderRadius:4,objectFit:'cover',flexShrink:0 }}/>}
-                <p className="sp-song-title">{s.title}</p>
-              </div>
-              <p className="sp-song-artist" style={{ color:'#b3b3b3' }}>{s.artist || '—'}</p>
-              <span style={{ color:'#b3b3b3', fontSize:13, fontFamily:'monospace', textAlign:'right', paddingRight:16 }}>
-                {s.duration ? fmtDur(s.duration) : '—'}
-              </span>
-            </div>
-          );
-        })}
+        {songs.map((s, i) => (
+          <SpSongRow
+            key={s.id}
+            song={s}
+            index={i}
+            onClick={() => playPlaylist(songs, i)}
+          />
+        ))}
       </div>
     </div>
   );
