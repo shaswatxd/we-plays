@@ -8,14 +8,28 @@ const searchCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getYtdlpPath() {
-  const bundled = path.join(__dirname, '../../assets/binaries/yt-dlp.exe');
-  if (fs.existsSync(bundled)) return bundled;
+  // If running from packaged app.asar, check process.resourcesPath or app.asar.unpacked first to avoid spawning inside ASAR
+  const isAsar = __dirname.includes('app.asar');
+
+  if (process.resourcesPath) {
+    const extraResource = path.join(process.resourcesPath, 'binaries/yt-dlp.exe');
+    if (fs.existsSync(extraResource)) return extraResource;
+    const extraResourceUnix = path.join(process.resourcesPath, 'binaries/yt-dlp');
+    if (fs.existsSync(extraResourceUnix)) return extraResourceUnix;
+  }
+
   const asarUnpacked = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/yt-dlp.exe');
   if (fs.existsSync(asarUnpacked)) return asarUnpacked;
-  const extraResource = path.join(process.resourcesPath || '', 'binaries/yt-dlp.exe');
-  if (fs.existsSync(extraResource)) return extraResource;
-  const bundledUnix = path.join(__dirname, '../../assets/binaries/yt-dlp');
-  if (fs.existsSync(bundledUnix)) return bundledUnix;
+  const asarUnpackedUnix = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/yt-dlp');
+  if (fs.existsSync(asarUnpackedUnix)) return asarUnpackedUnix;
+
+  if (!isAsar) {
+    const bundled = path.join(__dirname, '../../assets/binaries/yt-dlp.exe');
+    if (fs.existsSync(bundled)) return bundled;
+    const bundledUnix = path.join(__dirname, '../../assets/binaries/yt-dlp');
+    if (fs.existsSync(bundledUnix)) return bundledUnix;
+  }
+
   try {
     execSync('yt-dlp --version', { stdio: 'ignore', windowsHide: true });
     return 'yt-dlp';
@@ -435,13 +449,30 @@ function getPlaylistInfo(url) {
 }
 
 function getFpcalcPath() {
-  const locations = [
-    path.join(__dirname, '../../assets/binaries/fpcalc.exe'),
-    path.join(__dirname, '../../assets/binaries/fpcalc'),
-  ];
-  for (const loc of locations) {
-    if (fs.existsSync(loc)) return loc;
+  const isAsar = __dirname.includes('app.asar');
+
+  if (process.resourcesPath) {
+    const extraResource = path.join(process.resourcesPath, 'binaries/fpcalc.exe');
+    if (fs.existsSync(extraResource)) return extraResource;
+    const extraResourceUnix = path.join(process.resourcesPath, 'binaries/fpcalc');
+    if (fs.existsSync(extraResourceUnix)) return extraResourceUnix;
   }
+
+  const asarUnpacked = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/fpcalc.exe');
+  if (fs.existsSync(asarUnpacked)) return asarUnpacked;
+  const asarUnpackedUnix = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/fpcalc');
+  if (fs.existsSync(asarUnpackedUnix)) return asarUnpackedUnix;
+
+  if (!isAsar) {
+    const locations = [
+      path.join(__dirname, '../../assets/binaries/fpcalc.exe'),
+      path.join(__dirname, '../../assets/binaries/fpcalc'),
+    ];
+    for (const loc of locations) {
+      if (fs.existsSync(loc)) return loc;
+    }
+  }
+
   try {
     execSync('fpcalc -version', { stdio: 'ignore', windowsHide: true });
     return 'fpcalc';
