@@ -131,6 +131,21 @@ Write-Ok "Git push done  ($(Get-Elapsed $sw))"
 Write-Step 4 5 "Pushing website..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
+# Auto-update hardcoded version + download link in index.html
+$indexPath = Join-Path $WEBSITE "index.html"
+if (Test-Path $indexPath) {
+    $html = Get-Content $indexPath -Raw -Encoding UTF8
+
+    # Update version badge (any vX.X.X)
+    $html = $html -replace '(Version )\d+\.\d+\.\d+( — Powered by Electron)', "`${1}$VERSION`${2}"
+
+    # Update download href (vX.X.X/WePlays-X.X.X-Setup.exe)
+    $html = $html -replace 'releases/download/v[\d.]+/WePlays-[\d.]+-Setup\.exe', "releases/download/$TAG/WePlays-$VERSION-Setup.exe"
+
+    [System.IO.File]::WriteAllText($indexPath, $html, (New-Object System.Text.UTF8Encoding $false))
+    Write-Info "Website version updated -> v$VERSION"
+}
+
 Push-Location $WEBSITE
 try {
     $changes = git status --porcelain
@@ -145,6 +160,7 @@ try {
 } catch {
     Write-Info "Website push skipped"
 } finally { Pop-Location }
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 5 - version bump

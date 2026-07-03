@@ -12,7 +12,7 @@ export default function SettingsView() {
   const [updating, setUpdating] = useState(false);
 
   // App Auto-Updater states
-  const [appVersion, setAppVersion] = useState('');
+  const [appVersion, setAppVersion] = useState('Loading…');
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateProgress, setUpdateProgress] = useState(null);
@@ -1044,7 +1044,7 @@ export default function SettingsView() {
           <p className="sp-settings-title">Application Updates</p>
           <div className="sp-settings-row">
             <span className="sp-settings-key">App version</span>
-            <span className="sp-mono">v{appVersion || '2.0.0'}</span>
+            <span className="sp-mono">{appVersion ? `v${appVersion}` : 'Loading…'}</span>
           </div>
           
           {updateInfo && updateInfo.updateAvailable && (
