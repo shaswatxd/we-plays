@@ -85,7 +85,8 @@ $parts = $VERSION -split '\.'
 $parts[2] = [int]$parts[2] + 1
 $NEW_VERSION = $parts -join '.'
 $pkg.version = $NEW_VERSION
-$pkg | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $APP "package.json") -Encoding UTF8
+$pkgJson = $pkg | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText((Join-Path $APP "package.json"), $pkgJson, (New-Object System.Text.UTF8Encoding $false))
 Push-Location $ROOT
 try {
     git add -A
