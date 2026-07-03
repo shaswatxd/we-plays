@@ -4,6 +4,7 @@
     "main":  "src/main/index.js",
     "description":  "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
     "author":  "SHASWATTTT",
+    "license":  "MIT",
     "scripts":  {
                     "dev":  "vite",
                     "build":  "vite build",
@@ -34,6 +35,7 @@
     "build":  {
                   "appId":  "com.weplays.app",
                   "productName":  "We Plays",
+                  "compression":  "maximum",
                   "publish":  null,
                   "directories":  {
                                       "output":  "../../dist_installer"
@@ -45,7 +47,18 @@
                                 "package.json",
                                 "assets/**/*",
                                 "!node_modules/.cache/**",
-                                "!**/*.map"
+                                "!**/*.map",
+                                "!**/*.md",
+                                "!**/*.ts",
+                                "!**/*.d.ts",
+                                "!**/test/**",
+                                "!**/tests/**",
+                                "!**/__tests__/**",
+                                "!**/coverage/**",
+                                "!**/.github/**",
+                                "!**/CHANGELOG*",
+                                "!**/LICENSE*",
+                                "!**/README*"
                             ],
                   "asarUnpack":  [
                                      "**/node_modules/ffmpeg-static/**",

@@ -1,100 +1,187 @@
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
-$ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
-$APP = Join-Path (Join-Path $ROOT "resources") "app"
-$DIST = Join-Path $ROOT "dist_installer"
+$ROOT    = Split-Path -Parent $MyInvocation.MyCommand.Path
+$APP     = Join-Path (Join-Path $ROOT "resources") "app"
+$DIST    = Join-Path $ROOT "dist_installer"
 $WEBSITE = Join-Path $ROOT "website"
 
-$pkg = Get-Content (Join-Path $APP "package.json") | ConvertFrom-Json
+$pkg     = Get-Content (Join-Path $APP "package.json") | ConvertFrom-Json
 $VERSION = $pkg.version
-$REPO = "shaswatxd/we-plays"
-$TAG = "v$VERSION"
+$REPO    = "shaswatxd/we-plays"
+$TAG     = "v$VERSION"
 
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+function Write-Step($n, $total, $msg) {
+    Write-Host ""
+    Write-Host "[$n/$total] $msg" -ForegroundColor Yellow
+}
+
+function Write-Ok($msg)   { Write-Host "  [OK]  $msg" -ForegroundColor Green }
+function Write-Info($msg) { Write-Host "  [..] $msg"  -ForegroundColor DarkGray }
+function Write-Err($msg)  { Write-Host "  [!!]  $msg" -ForegroundColor Red }
+
+function Get-Elapsed($sw) {
+    return "$([math]::Round($sw.Elapsed.TotalSeconds, 1))s"
+}
+
+# ── banner ────────────────────────────────────────────────────────────────────
+
+$totalTimer = [System.Diagnostics.Stopwatch]::StartNew()
+Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  WE PLAYS - Push Script v$VERSION" -ForegroundColor Cyan
+Write-Host "  WE PLAYS - Push Script v$VERSION"       -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Clear any stale GITHUB_TOKEN so gh CLI uses keyring credentials
-$env:GITHUB_TOKEN = ""
-[System.Environment]::SetEnvironmentVariable("GITHUB_TOKEN", $null, "Process")
-try {
-    gh auth switch --user shaswatxd 2>$null | Out-Null
-    Write-Host "  Using GitHub account: shaswatxd" -ForegroundColor DarkGray
-} catch {}
+# ── cleanup ───────────────────────────────────────────────────────────────────
 
-# Clean up leftover Tauri files if present
 $tauriFolder = Join-Path $APP "src-tauri"
 if (Test-Path $tauriFolder) {
-    Write-Host "Cleaning up leftover Tauri files..." -ForegroundColor Cyan
+    Write-Info "Removing leftover Tauri folder..."
     Remove-Item -Recurse -Force $tauriFolder
 }
 
-Write-Host "`n[1/4] Installing npm dependencies..." -ForegroundColor Yellow
-Push-Location $APP
-try { npm install } finally { Pop-Location }
+# ── clear GitHub token so gh CLI uses keyring ────────────────────────────────
 
-Write-Host "`n[2/4] Building Electron app & installer..." -ForegroundColor Yellow
+$env:GITHUB_TOKEN = ""
+[System.Environment]::SetEnvironmentVariable("GITHUB_TOKEN", $null, "Process")
+try { gh auth switch --user shaswatxd 2>$null | Out-Null } catch {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 1 - npm install
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 1 5 "Installing npm dependencies..."
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+Push-Location $APP
+try { npm install --prefer-offline 2>&1 | Out-Null } finally { Pop-Location }
+
+Write-Ok "Dependencies ready  ($(Get-Elapsed $sw))"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 2 - build
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 2 5 "Building Electron app & installer  (compression: maximum)..."
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
 Push-Location $APP
 try { npm run dist } finally { Pop-Location }
 
-Write-Host "`n[3/4] Pushing to GitHub..." -ForegroundColor Yellow
-Push-Location $ROOT
-try {
-    git add -A
-    git commit -m "v$VERSION update" 2>$null
-    git push origin master:main 2>$null
-} catch { Write-Host "Push skipped" -ForegroundColor DarkGray }
-Pop-Location
-
-Write-Host "`n[4/4] Uploading installer to GitHub release..." -ForegroundColor Yellow
 $SETUP = Get-ChildItem $DIST -Filter "WePlays-$VERSION-Setup.exe" | Select-Object -First 1
-if ($SETUP) {
-    try {
-        $oldErrorAction = $ErrorActionPreference
-        $ErrorActionPreference = "Continue"
-        gh release view $TAG --repo $REPO 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            gh release create $TAG --repo $REPO --title "We Plays $VERSION" --notes "v$VERSION release" $SETUP.FullName
-        } else {
-            gh release upload $TAG --repo $REPO --clobber $SETUP.FullName
-        }
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  Uploaded: $($SETUP.Name) ($([math]::Round($SETUP.Length/1MB,1)) MB)" -ForegroundColor Green
-        } else {
-            Write-Host "  GitHub release upload failed (non-zero exit code). Please run 'gh auth login' to authenticate." -ForegroundColor Red
-        }
-        $ErrorActionPreference = $oldErrorAction
-    } catch {
-        Write-Host "  GitHub release upload failed. Please ensure GitHub CLI is authenticated." -ForegroundColor Red
-    }
-} else {
-    Write-Host "  ERROR: Installer not found in $DIST" -ForegroundColor Red
+if (-not $SETUP) {
+    Write-Err "Installer not found in $DIST -- build may have failed."
+    exit 1
 }
 
-Write-Host "`nPushing website..." -ForegroundColor Yellow
+$sizeMB = [math]::Round($SETUP.Length / 1MB, 1)
+Write-Ok "Build complete  ->  $($SETUP.Name)  ($sizeMB MB)  ($(Get-Elapsed $sw))"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 3 - git push + GitHub release upload (parallel)
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 3 5 "Pushing to GitHub & uploading release  (parallel)..."
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+# git push runs as a background job
+$gitJob = Start-Job -ScriptBlock {
+    param($root, $ver)
+    Set-Location $root
+    git add -A
+    git commit -m "v$ver update" 2>&1 | Out-Null
+    git push origin master:main 2>&1 | Out-Null
+    $LASTEXITCODE
+} -ArgumentList $ROOT, $VERSION
+
+# GitHub release upload runs in foreground
+$uploadOk = $false
+try {
+    $oldEA = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
+    gh release view $TAG --repo $REPO 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        gh release create $TAG --repo $REPO --title "We Plays $VERSION" --notes "v$VERSION release" $SETUP.FullName
+    } else {
+        gh release upload $TAG --repo $REPO --clobber $SETUP.FullName
+    }
+
+    if ($LASTEXITCODE -eq 0) { $uploadOk = $true }
+    $ErrorActionPreference = $oldEA
+} catch {
+    $ErrorActionPreference = $oldEA
+}
+
+# wait for git job to finish
+Receive-Job $gitJob -Wait -AutoRemoveJob 2>$null | Out-Null
+
+if ($uploadOk) {
+    Write-Ok "Release uploaded  ->  $($SETUP.Name) ($sizeMB MB)"
+} else {
+    Write-Err "GitHub release upload failed. Run 'gh auth login' if unauthenticated."
+}
+Write-Ok "Git push done  ($(Get-Elapsed $sw))"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 4 - website push
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 4 5 "Pushing website..."
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
 Push-Location $WEBSITE
 try {
-    git add .
-    git commit -m "v$VERSION website update" 2>$null
-    git push origin master:main 2>$null
-} catch { Write-Host "No website changes" -ForegroundColor DarkGray }
-Pop-Location
+    $changes = git status --porcelain
+    if ($changes) {
+        git add .
+        git commit -m "v$VERSION website update" 2>$null | Out-Null
+        git push origin master:main 2>$null | Out-Null
+        Write-Ok "Website pushed  ($(Get-Elapsed $sw))"
+    } else {
+        Write-Info "No website changes to push"
+    }
+} catch {
+    Write-Info "Website push skipped"
+} finally { Pop-Location }
 
-Write-Host "`n[5/5] Bumping version for next release..." -ForegroundColor Yellow
-$parts = $VERSION -split '\.'
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 5 - version bump
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 5 5 "Bumping version for next release..."
+
+$parts    = $VERSION -split '\.'
 $parts[2] = [int]$parts[2] + 1
-$NEW_VERSION = $parts -join '.'
-$pkg.version = $NEW_VERSION
+$NEW_VER  = $parts -join '.'
+
+$pkg.version = $NEW_VER
 $pkgJson = $pkg | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText((Join-Path $APP "package.json"), $pkgJson, (New-Object System.Text.UTF8Encoding $false))
+[System.IO.File]::WriteAllText(
+    (Join-Path $APP "package.json"),
+    $pkgJson,
+    (New-Object System.Text.UTF8Encoding $false)
+)
+
 Push-Location $ROOT
 try {
     git add -A
-    git commit -m "v$NEW_VERSION bump" 2>$null
+    git commit -m "v$NEW_VER bump" 2>$null | Out-Null
 } catch {}
 Pop-Location
-Write-Host "  Version bumped: $VERSION -> $NEW_VERSION" -ForegroundColor Green
 
-Write-Host "`nDone!" -ForegroundColor Green
-Write-Host "  Release: https://github.com/$REPO/releases/tag/$TAG" -ForegroundColor White
-Write-Host "  Website: https://website-nine-tau-67.vercel.app" -ForegroundColor White
+Write-Ok "Version bumped  $VERSION -> $NEW_VER"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# done
+# ─────────────────────────────────────────────────────────────────────────────
+
+$total = [math]::Round($totalTimer.Elapsed.TotalSeconds)
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Done in ${total}s" -ForegroundColor Green
+Write-Host "  Release : https://github.com/$REPO/releases/tag/$TAG" -ForegroundColor White
+Write-Host "  Website : https://website-nine-tau-67.vercel.app"      -ForegroundColor White
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
