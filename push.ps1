@@ -14,6 +14,14 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  WE PLAYS - Push Script v$VERSION" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
+# Clear any stale GITHUB_TOKEN so gh CLI uses keyring credentials
+$env:GITHUB_TOKEN = ""
+[System.Environment]::SetEnvironmentVariable("GITHUB_TOKEN", $null, "Process")
+try {
+    gh auth switch --user shaswatxd 2>$null | Out-Null
+    Write-Host "  Using GitHub account: shaswatxd" -ForegroundColor DarkGray
+} catch {}
+
 # Clean up leftover Tauri files if present
 $tauriFolder = Join-Path $APP "src-tauri"
 if (Test-Path $tauriFolder) {
