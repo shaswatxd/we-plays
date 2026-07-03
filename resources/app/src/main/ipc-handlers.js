@@ -1,4 +1,4 @@
-const { ipcMain, dialog, shell } = require('electron');
+const { ipcMain, dialog, shell, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -510,6 +510,145 @@ function setupIpcHandlers(mainWindow, store) {
   ipcMain.handle('stop-lan-share', () => {
     if (lanServer) { try { lanServer.close(); } catch(_) {} lanServer = null; }
     return true;
+  });
+
+  // ── AUTO-UPDATER HANDLERS ──────────────────────────────────────────────
+
+  ipcMain.handle('get-app-version', () => app.getVersion());
+
+  ipcMain.handle('check-app-update', async () => {
+    try {
+      const release = await fetchLatestRelease();
+      const latestVer = release.tag_name.replace(/^v/, '');
+      const currentVer = app.getVersion();
+      
+      const updateAvailable = isNewerVersion(currentVer, latestVer);
+      const exeAsset = release.assets?.find(a => a.name.endsWith('.exe'));
+      
+      return {
+        updateAvailable,
+        version: latestVer,
+        releaseNotes: release.body || '',
+        downloadUrl: exeAsset ? exeAsset.browser_download_url : null,
+        fileName: exeAsset ? exeAsset.name : null
+      };
+    } catch (err) {
+      throw new Error(err.message);
+    }
+  });
+
+  ipcMain.handle('install-app-update', async (event, downloadUrl) => {
+    try {
+      const destPath = path.join(app.getPath('temp'), 'WePlays-Setup-Update.exe');
+      
+      // Delete old installer if it exists
+      if (fs.existsSync(destPath)) {
+        try { fs.unlinkSync(destPath); } catch (_) {}
+      }
+
+      await downloadFile(downloadUrl, destPath, (percent) => {
+        mainWindow.webContents.send('update-progress', percent);
+      });
+
+      // Spawn installer and quit app
+      const { spawn } = require('child_process');
+      const child = spawn(destPath, [], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+      app.quit();
+      return true;
+    } catch (err) {
+      throw new Error(err.message);
+    }
+  });
+}
+
+// ── AUTO-UPDATER HELPERS ──────────────────────────────────────────────────
+
+function fetchLatestRelease() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/shaswatxd/we-plays/releases/latest',
+      headers: {
+        'User-Agent': 'we-plays-updater'
+      }
+    };
+
+    https.get(options, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to check for updates: Status Code ${res.statusCode}`));
+        return;
+      }
+
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+function isNewerVersion(current, latest) {
+  const c = current.replace(/^v/, '').split('.').map(Number);
+  const l = latest.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(c.length, l.length); i++) {
+    const cv = c[i] || 0;
+    const lv = l[i] || 0;
+    if (lv > cv) return true;
+    if (lv < cv) return false;
+  }
+  return false;
+}
+
+function downloadFile(url, destPath, progressCallback) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    
+    function getUrl(targetUrl) {
+      https.get(targetUrl, { headers: { 'User-Agent': 'we-plays-updater' } }, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          getUrl(res.headers.location);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          reject(new Error(`Failed to download update: Status Code ${res.statusCode}`));
+          return;
+        }
+
+        const totalBytes = parseInt(res.headers['content-length'], 10) || 0;
+        let downloadedBytes = 0;
+
+        res.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+          if (totalBytes > 0) {
+            const percent = Math.round((downloadedBytes / totalBytes) * 100);
+            progressCallback(percent);
+          }
+        });
+
+        res.pipe(file);
+
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+      }).on('error', (err) => {
+        fs.unlink(destPath, () => {});
+        reject(err);
+      });
+    }
+
+    getUrl(url);
   });
 }
 

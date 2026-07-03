@@ -14,6 +14,13 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  WE PLAYS - Push Script v$VERSION" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
+# Clean up leftover Tauri files if present
+$tauriFolder = Join-Path $APP "src-tauri"
+if (Test-Path $tauriFolder) {
+    Write-Host "Cleaning up leftover Tauri files..." -ForegroundColor Cyan
+    Remove-Item -Recurse -Force $tauriFolder
+}
+
 Write-Host "`n[1/4] Installing npm dependencies..." -ForegroundColor Yellow
 Push-Location $APP
 try { npm install } finally { Pop-Location }
@@ -25,7 +32,7 @@ try { npm run dist } finally { Pop-Location }
 Write-Host "`n[3/4] Pushing to GitHub..." -ForegroundColor Yellow
 Push-Location $ROOT
 try {
-    git add resources/app/package.json resources/app/src resources/app/index.html resources/app/vite.config.js resources/app/assets .gitignore push.ps1
+    git add -A
     git commit -m "v$VERSION update" 2>$null
     git push origin master:main 2>$null
 } catch { Write-Host "Push skipped" -ForegroundColor DarkGray }

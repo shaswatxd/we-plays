@@ -11,6 +11,13 @@ export default function SettingsView() {
   const [ffmpegP,  setFfmpegP]  = useState('Checking…');
   const [updating, setUpdating] = useState(false);
 
+  // App Auto-Updater states
+  const [appVersion, setAppVersion] = useState('');
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateProgress, setUpdateProgress] = useState(null);
+  const [updatingApp, setUpdatingApp] = useState(false);
+
 
 
   const [dupGroups, setDupGroups] = useState([]);
@@ -33,7 +40,13 @@ export default function SettingsView() {
   const [dupPlDone, setDupPlDone] = useState(false);
   const [dupPlError, setDupPlError] = useState('');
 
-  useEffect(() => { loadSettings(); checkBins(); }, []);
+  useEffect(() => {
+    loadSettings();
+    checkBins();
+    if (window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then(setAppVersion);
+    }
+  }, []);
   useEffect(() => {
     if (settings.downloadFolder) setDlFolder(settings.downloadFolder);
     if (settings.defaultFormat)  setFormat(settings.defaultFormat);
@@ -64,6 +77,44 @@ export default function SettingsView() {
     } catch (e) {
       window.showToast?.(`Update failed: ${e.message}`, 'error');
     } finally { setUpdating(false); }
+  };
+
+  const checkAppUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const info = await window.electronAPI?.checkAppUpdate();
+      setUpdateInfo(info);
+      if (info?.updateAvailable) {
+        window.showToast?.(`Update available: v${info.version}`, 'info');
+      } else {
+        window.showToast?.('We Plays is up to date!', 'success');
+      }
+    } catch (e) {
+      window.showToast?.(`Failed to check for updates: ${e.message}`, 'error');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const installAppUpdate = async () => {
+    if (!updateInfo?.downloadUrl) return;
+    setUpdatingApp(true);
+    setUpdateProgress(0);
+
+    const unsubscribe = window.electronAPI?.onUpdateProgress((percent) => {
+      setUpdateProgress(percent);
+    });
+
+    try {
+      window.showToast?.('Downloading update...', 'info');
+      await window.electronAPI?.installAppUpdate(updateInfo.downloadUrl);
+    } catch (e) {
+      window.showToast?.(`Failed to install update: ${e.message}`, 'error');
+      setUpdatingApp(false);
+      setUpdateProgress(null);
+    } finally {
+      if (unsubscribe) unsubscribe();
+    }
   };
 
   const handleClearHistory = async () => {
@@ -984,6 +1035,56 @@ export default function SettingsView() {
             >
               <RefreshCw size={13} style={updating ? { animation:'spin 0.9s linear infinite' } : {}} />
               {updating ? 'Updating…' : 'Update Now'}
+            </button>
+          </div>
+        </div>
+
+        {/* Application Updates */}
+        <div className="sp-settings-section">
+          <p className="sp-settings-title">Application Updates</p>
+          <div className="sp-settings-row">
+            <span className="sp-settings-key">App version</span>
+            <span className="sp-mono">v{appVersion || '2.0.0'}</span>
+          </div>
+          
+          {updateInfo && updateInfo.updateAvailable && (
+            <div style={{ background: 'rgba(29, 185, 84, 0.1)', border: '1px solid rgba(29, 185, 84, 0.3)', padding: 12, borderRadius: 8, marginTop: 10, marginBottom: 10 }}>
+              <p style={{ margin: 0, fontWeight: 700, color: '#1db954', fontSize: 13 }}>New Update Available: v{updateInfo.version}</p>
+              {updateInfo.releaseNotes && (
+                <pre style={{ margin: '8px 0', fontSize: 11, color: '#b3b3b3', whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 4, fontFamily: 'monospace' }}>
+                  {updateInfo.releaseNotes}
+                </pre>
+              )}
+              {updatingApp ? (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#b3b3b3', marginBottom: 4 }}>
+                    <span>Downloading update...</span>
+                    <span>{updateProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${updateProgress}%`, height: '100%', background: '#1db954', transition: 'width 0.2s ease' }}></div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={installAppUpdate}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1db954', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 12, marginTop: 8 }}
+                >
+                  <Download size={13} /> Download & Install Update
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="sp-settings-row" style={{ borderBottom: 'none' }}>
+            <span className="sp-settings-key">Check for updates</span>
+            <button
+              onClick={checkAppUpdate}
+              disabled={checkingUpdate || updatingApp}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#b3b3b3', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 12 }}
+            >
+              <RefreshCw size={13} style={checkingUpdate ? { animation: 'spin 0.9s linear infinite' } : {}} />
+              {checkingUpdate ? 'Checking…' : 'Check Now'}
             </button>
           </div>
         </div>

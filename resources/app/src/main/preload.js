@@ -144,4 +144,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('player-previous', fn);
     return () => ipcRenderer.removeListener('player-previous', fn);
   },
+
+  // Auto-Updater
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkAppUpdate: () => ipcRenderer.invoke('check-app-update'),
+  installAppUpdate: (downloadUrl) => ipcRenderer.invoke('install-app-update'),
+  onUpdateProgress: (callback) => {
+    const fn = (event, percent) => callback(percent);
+    ipcRenderer.on('update-progress', fn);
+    return () => ipcRenderer.removeListener('update-progress', fn);
+  }
 });
