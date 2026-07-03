@@ -27,9 +27,14 @@
     "esbuild": true,
     "ffmpeg-static": true
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaswatxd/we-plays.git"
+  },
   "build": {
     "appId": "com.weplays.app",
     "productName": "We Plays",
+    "publish": null,
     "directories": {
       "output": "../../dist_installer"
     },

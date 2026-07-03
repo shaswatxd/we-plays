@@ -34,13 +34,24 @@ Pop-Location
 Write-Host "`n[4/4] Uploading installer to GitHub release..." -ForegroundColor Yellow
 $SETUP = Get-ChildItem $DIST -Filter "WePlays-$VERSION-Setup.exe" | Select-Object -First 1
 if ($SETUP) {
-    gh release view $TAG --repo $REPO 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        gh release create $TAG --repo $REPO --title "We Plays $VERSION" --notes "v$VERSION release" $SETUP.FullName
-    } else {
-        gh release upload $TAG --repo $REPO --clobber $SETUP.FullName
+    try {
+        $oldErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        gh release view $TAG --repo $REPO 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            gh release create $TAG --repo $REPO --title "We Plays $VERSION" --notes "v$VERSION release" $SETUP.FullName
+        } else {
+            gh release upload $TAG --repo $REPO --clobber $SETUP.FullName
+        }
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Uploaded: $($SETUP.Name) ($([math]::Round($SETUP.Length/1MB,1)) MB)" -ForegroundColor Green
+        } else {
+            Write-Host "  GitHub release upload failed (non-zero exit code). Please run 'gh auth login' to authenticate." -ForegroundColor Red
+        }
+        $ErrorActionPreference = $oldErrorAction
+    } catch {
+        Write-Host "  GitHub release upload failed. Please ensure GitHub CLI is authenticated." -ForegroundColor Red
     }
-    Write-Host "  Uploaded: $($SETUP.Name) ($([math]::Round($SETUP.Length/1MB,1)) MB)" -ForegroundColor Green
 } else {
     Write-Host "  ERROR: Installer not found in $DIST" -ForegroundColor Red
 }
