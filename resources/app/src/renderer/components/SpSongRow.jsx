@@ -150,7 +150,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </>
           )}
           {!isSearchItem && (
-            <button className="sp-row-btn" style={{ opacity:1 }} onClick={openMenu}>
+            <button className="sp-row-btn" style={{ opacity:1 }} onMouseDown={openMenu}>
               <MoreVertical size={15} />
             </button>
           )}
