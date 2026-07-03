@@ -1,29 +1,80 @@
 {
   "name": "we-plays",
   "version": "2.0.0",
-  "private": true,
+  "main": "src/main/index.js",
   "description": "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
   "author": "SHASWATTTT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "push": "tauri build && powershell -ExecutionPolicy Bypass -File \"..\\..\\push.ps1\""
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "push": "powershell -ExecutionPolicy Bypass -File \"..\\..\\push.ps1\""
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.6.0",
+    "electron-store": "^8.1.0",
+    "ffmpeg-static": "^5.2.0",
     "howler": "^2.2.4",
     "lucide-react": "^1.18.0",
+    "node-id3": "^0.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "sql.js": "^1.10.3",
     "zustand": "^4.5.0"
   },
+  "allowScripts": {
+    "electron": true,
+    "esbuild": true,
+    "ffmpeg-static": true
+  },
+  "build": {
+    "appId": "com.weplays.app",
+    "productName": "We Plays",
+    "directories": {
+      "output": "../../dist_installer"
+    },
+    "files": [
+      "src/**/*",
+      "dist/**/*",
+      "index.html",
+      "package.json",
+      "assets/**/*",
+      "!node_modules/.cache/**",
+      "!**/*.map"
+    ],
+    "asarUnpack": [
+      "**/node_modules/ffmpeg-static/**",
+      "**/node_modules/sql.js/**"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/binaries/yt-dlp.exe",
+        "to": "binaries/yt-dlp.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "WePlays-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "We Plays",
+      "deleteAppDataOnUninstall": false
+    }
+  },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.6.0",
     "@vitejs/plugin-react": "^6.0.2",
-    "esbuild": "^0.28.1",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.0.12",
     "vite": "^8.0.16"
   }
 }
