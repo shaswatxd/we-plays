@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.weplays.app",
     "productName": "We Plays",
+    "compression": "maximum",
     "directories": {
       "output": "../../dist_installer"
     },
@@ -40,7 +41,9 @@
       "package.json",
       "assets/**/*",
       "!node_modules/.cache/**",
-      "!**/*.map"
+      "!**/*.map",
+      "!**/dxcompiler.dll",
+      "!**/dxil.dll"
     ],
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**",
@@ -59,16 +62,19 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "WePlays-${version}-Setup.${ext}"
+      "artifactName": "WePlays-${version}-Setup.${ext}",
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "We Plays",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "unicode": true
     }
   },
   "devDependencies": {
