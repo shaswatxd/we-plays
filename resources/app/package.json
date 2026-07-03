@@ -71,14 +71,15 @@
                                          }
                                      ],
                   "win":  {
+                              "icon":  "assets/icons/icon.png",
                               "target":  [
-                                             {
-                                                 "target":  "nsis",
-                                                 "arch":  [
-                                                              "x64"
-                                                          ]
-                                             }
-                                         ],
+                                              {
+                                                  "target":  "nsis",
+                                                  "arch":  [
+                                                               "x64"
+                                                           ]
+                                              }
+                                          ],
                               "artifactName":  "WePlays-${version}-Setup.${ext}"
                           },
                   "nsis":  {
