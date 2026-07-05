@@ -110,6 +110,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startLanShare: (playlistId) => ipcRenderer.invoke('start-lan-share', playlistId),
   stopLanShare: () => ipcRenderer.invoke('stop-lan-share'),
 
+  // Tray play state sync
+  updateTrayPlayState: (isPlaying, songInfo) => ipcRenderer.send('update-tray-play-state', { isPlaying, songInfo }),
+
 
 
 

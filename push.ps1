@@ -66,10 +66,44 @@ $env:GITHUB_TOKEN = ""
 try { gh auth switch --user shaswatxd 2>$null | Out-Null } catch {}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 1 - npm install
+# STEP 1 - validate update-quit wiring
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Step 1 5 "Installing npm dependencies..."
+Write-Step 1 6 "Validating update-quit mechanism..."
+
+$indexJs   = Join-Path $APP "src\main\index.js"
+$ipcJs     = Join-Path $APP "src\main\ipc-handlers.js"
+
+# Check 1: index.js passes forceQuit callback to setupIpcHandlers
+$indexContent = Get-Content $indexJs -Raw
+$indexOk = $indexContent -match 'setupIpcHandlers\(mainWindow,\s*store,\s*\(\)\s*=>\s*\{.*isQuitting\s*=\s*true'
+
+# Check 2: ipc-handlers.js has forceQuit parameter
+$ipcContent = Get-Content $ipcJs -Raw
+$ipcOk = $ipcContent -match 'function setupIpcHandlers\(mainWindow,\s*store,\s*forceQuit\)'
+
+# Check 3: install-app-update calls forceQuit before app.quit()
+$forceQuitOk = $ipcContent -match 'if\s*\(forceQuit\)\s*forceQuit\(\).*\n.*app\.quit\(\)'
+
+if (-not ($indexOk -and $ipcOk -and $forceQuitOk)) {
+    Write-Err "UPDATE-QUIT VALIDATION FAILED!"
+    if (-not $indexOk) { Write-Err "  index.js: missing 'isQuitting = true' callback in setupIpcHandlers() call" }
+    if (-not $ipcOk)   { Write-Err "  ipc-handlers.js: setupIpcHandlers() missing forceQuit parameter" }
+    if (-not $forceQuitOk) { Write-Err "  ipc-handlers.js: install-app-update missing forceQuit() call before app.quit()" }
+    Write-Err ""
+    Write-Err "Fix: Make sure the update-quit chain is wired:"
+    Write-Err "  index.js:        setupIpcHandlers(mainWindow, store, () => { isQuitting = true; })"
+    Write-Err "  ipc-handlers.js: function setupIpcHandlers(mainWindow, store, forceQuit) { ... }"
+    Write-Err "  ipc-handlers.js: if (forceQuit) forceQuit(); app.quit();"
+    exit 1
+}
+Write-Ok "Update-quit mechanism properly wired"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 2 - npm install
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Step 2 6 "Installing npm dependencies..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 Push-Location $APP
@@ -78,10 +112,10 @@ try { npm install --prefer-offline 2>&1 | Out-Null } finally { Pop-Location }
 Write-Ok "Dependencies ready  ($(Get-Elapsed $sw))"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 2 - build
+# STEP 3 - build
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Step 2 5 "Building Electron app & installer  (compression: maximum)..."
+Write-Step 3 6 "Building Electron app & installer  (compression: maximum)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 Push-Location $APP
@@ -111,10 +145,10 @@ if ($oldFiles.Count -eq 0) { Write-Ok "No old versions found" }
 else { Write-Ok "Cleaned $($oldFiles.Count) old file(s)" }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 3 - git push + GitHub release upload (parallel)
+# STEP 4 - git push + GitHub release upload (parallel)
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Step 3 5 "Pushing to GitHub & uploading release  (parallel)..."
+Write-Step 4 6 "Pushing to GitHub & uploading release  (parallel)..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 # git push runs as a background job
@@ -157,10 +191,10 @@ if ($uploadOk) {
 Write-Ok "Git push done  ($(Get-Elapsed $sw))"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 4 - website push
+# STEP 5 - website push
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Step 4 5 "Pushing website..."
+Write-Step 5 6 "Pushing website..."
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 # Auto-update hardcoded version + download link in index.html
@@ -195,10 +229,10 @@ try {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 5 - version bump
+# STEP 6 - version bump
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Step 5 5 "Bumping version for next release..."
+Write-Step 6 6 "Bumping version for next release..."
 
 $parts    = $VERSION -split '\.'
 $parts[2] = [int]$parts[2] + 1

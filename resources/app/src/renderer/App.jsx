@@ -57,6 +57,33 @@ export default function App() {
     }
   }, []);
 
+  // Sync player state → tray (animated icon + dynamic Play/Pause label)
+  useEffect(() => {
+    if (!window.electronAPI?.updateTrayPlayState) return;
+    let prevPlaying = null;
+    let prevSongId = null;
+    const unsub = usePlayerStore.subscribe((state) => {
+      const { isPlaying, currentSong } = state;
+      if (isPlaying !== prevPlaying || currentSong?.id !== prevSongId) {
+        prevPlaying = isPlaying;
+        prevSongId = currentSong?.id;
+        window.electronAPI.updateTrayPlayState(isPlaying, currentSong ? {
+          title: currentSong.title,
+          artist: currentSong.artist
+        } : null);
+      }
+    });
+    // Fire immediately with current state
+    const { isPlaying, currentSong } = usePlayerStore.getState();
+    prevPlaying = isPlaying;
+    prevSongId = currentSong?.id;
+    window.electronAPI.updateTrayPlayState(isPlaying, currentSong ? {
+      title: currentSong.title,
+      artist: currentSong.artist
+    } : null);
+    return unsub;
+  }, []);
+
   useEffect(() => {
     const scrollEl = document.querySelector('.sp-main-scroll');
     if (scrollEl) {
