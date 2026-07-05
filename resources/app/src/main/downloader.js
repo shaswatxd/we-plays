@@ -7,10 +7,22 @@ const https = require('https');
 const searchCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+function getYtdlpLocalDir() {
+  const localAppData = process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local');
+  return path.join(localAppData, 'We Plays', 'binaries');
+}
+
 function getYtdlpPath() {
-  // If running from packaged app.asar, check process.resourcesPath or app.asar.unpacked first to avoid spawning inside ASAR
   const isAsar = __dirname.includes('app.asar');
 
+  // 1. User-writable updated copy (from previous updates)
+  const localDir = getYtdlpLocalDir();
+  const localBin = process.platform === 'win32'
+    ? path.join(localDir, 'yt-dlp.exe')
+    : path.join(localDir, 'yt-dlp');
+  if (fs.existsSync(localBin)) return localBin;
+
+  // 2. Packaged extraResources
   if (process.resourcesPath) {
     const extraResource = path.join(process.resourcesPath, 'binaries/yt-dlp.exe');
     if (fs.existsSync(extraResource)) return extraResource;
@@ -18,11 +30,13 @@ function getYtdlpPath() {
     if (fs.existsSync(extraResourceUnix)) return extraResourceUnix;
   }
 
+  // 3. asar.unpacked
   const asarUnpacked = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/yt-dlp.exe');
   if (fs.existsSync(asarUnpacked)) return asarUnpacked;
   const asarUnpackedUnix = path.join(__dirname, '../../../app.asar.unpacked/assets/binaries/yt-dlp');
   if (fs.existsSync(asarUnpackedUnix)) return asarUnpackedUnix;
 
+  // 4. Dev mode
   if (!isAsar) {
     const bundled = path.join(__dirname, '../../assets/binaries/yt-dlp.exe');
     if (fs.existsSync(bundled)) return bundled;
@@ -30,6 +44,7 @@ function getYtdlpPath() {
     if (fs.existsSync(bundledUnix)) return bundledUnix;
   }
 
+  // 5. System PATH
   try {
     execSync('yt-dlp --version', { stdio: 'ignore', windowsHide: true });
     return 'yt-dlp';
@@ -258,17 +273,99 @@ function cancelDownload(downloadInfo) {
 
 function updateYtdlp() {
   return new Promise((resolve, reject) => {
-    const ytdlp = getYtdlpPath();
-    if (!ytdlp) {
-      reject(new Error('yt-dlp not found'));
-      return;
-    }
-    exec(`"${ytdlp}" -U`, { windowsHide: true }, (error, stdout) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(stdout.includes('up-to-date') ? 'yt-dlp is up to date' : 'yt-dlp updated successfully');
+    const https = require('https');
+    const { execSync } = require('child_process');
+    const localDir = getYtdlpLocalDir();
+    const isWin = process.platform === 'win32';
+    const fileName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+    const targetPath = path.join(localDir, fileName);
+
+    // Ensure directory exists
+    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+
+    // Detect current version
+    const currentBin = getYtdlpPath();
+    let currentVer = '';
+    try { currentVer = execSync(`"${currentBin}" --version`, { windowsHide: true }).toString().trim(); } catch {}
+
+    // Get latest version from GitHub API
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/yt-dlp/yt-dlp/releases/latest',
+      headers: { 'User-Agent': 'WePlays-App' }
+    };
+
+    https.get(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try {
+          const release = JSON.parse(data);
+          const latestVer = release.tag_name;
+
+          if (currentVer && currentVer === latestVer) {
+            resolve('yt-dlp is up to date');
+            return;
+          }
+
+          // Find the correct asset
+          const assetName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+          const asset = release.assets.find(a => a.name === assetName);
+          if (!asset) {
+            reject(new Error('Asset not found in release'));
+            return;
+          }
+
+          // Download the asset
+          const downloadOpts = {
+            hostname: 'github.com',
+            path: asset.browser_download_url.replace('https://github.com', ''),
+            headers: { 'User-Agent': 'WePlays-App' }
+          };
+
+          // Use redirect-following download
+          function followRedirects(url, callback) {
+            const parsedUrl = new URL(url);
+            const opts = {
+              hostname: parsedUrl.hostname,
+              path: parsedUrl.pathname + parsedUrl.search,
+              headers: { 'User-Agent': 'WePlays-App' }
+            };
+            https.get(opts, (resp) => {
+              if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
+                followRedirects(resp.headers.location, callback);
+              } else {
+                callback(resp);
+              }
+            }).on('error', reject);
+          }
+
+          followRedirects(asset.browser_download_url, (resp) => {
+            if (resp.statusCode !== 200) {
+              reject(new Error(`Download failed with status ${resp.statusCode}`));
+              return;
+            }
+            const file = fs.createWriteStream(targetPath);
+            resp.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              // Make executable on unix
+              if (!isWin) {
+                try { fs.chmodSync(targetPath, 0o755); } catch {}
+              }
+              resolve(`yt-dlp updated to ${latestVer}`);
+            });
+            file.on('error', (err) => {
+              fs.unlink(targetPath, () => {});
+              reject(err);
+            });
+          });
+        } catch (e) {
+          reject(new Error('Failed to check for updates: ' + e.message));
+        }
+      });
+    }).on('error', (err) => {
+      reject(new Error('Network error: ' + err.message));
     });
   });
 }
