@@ -12,7 +12,7 @@ let activeDownloads = new Map();
 let lanServer = null;
 
 
-function setupIpcHandlers(mainWindow, store) {
+function setupIpcHandlers(mainWindow, store, forceQuit) {
   ipcMain.handle('window-minimize', () => mainWindow.minimize());
   ipcMain.handle('window-maximize', () => {
     if (mainWindow.isMaximized()) mainWindow.unmaximize();
@@ -574,6 +574,7 @@ function setupIpcHandlers(mainWindow, store) {
 
       // Give the installer time to fully detach before quitting
       await new Promise(resolve => setTimeout(resolve, 2000));
+      if (forceQuit) forceQuit();
       app.quit();
       return true;
     } catch (err) {

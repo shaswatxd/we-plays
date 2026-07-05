@@ -146,7 +146,7 @@ app.whenReady().then(async () => {
   app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   await initDatabase();
   createWindow();
-  setupIpcHandlers(mainWindow, store);
+  setupIpcHandlers(mainWindow, store, () => { isQuitting = true; });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
