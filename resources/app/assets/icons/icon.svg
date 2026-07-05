@@ -1,54 +1,106 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#DB2777;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#F97316;stop-opacity:1" />
+    <!-- Background Gradient: Ultra-premium dark violet to midnight blue -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A051D" />
+      <stop offset="50%" stop-color="#140E36" />
+      <stop offset="100%" stop-color="#05020C" />
     </linearGradient>
-    <linearGradient id="playGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:1" />
+    
+    <!-- Neon Pink to Purple Gradient -->
+    <linearGradient id="neon-pink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF2E93" />
+      <stop offset="100%" stop-color="#A100FF" />
     </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+    
+    <!-- Neon Cyan to Blue Gradient -->
+    <linearGradient id="neon-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+    
+    <!-- Gold/Orange Accent Gradient -->
+    <linearGradient id="accent-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF5E00" />
+      <stop offset="100%" stop-color="#FFD600" />
+    </linearGradient>
+
+    <!-- Glassmorphic Overlay Gradient -->
+    <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02" />
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="neon-glow-strong" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="15" result="blur1" />
+      <feGaussianBlur stdDeviation="30" result="blur2" />
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>
+    
+    <filter id="neon-glow-subtle" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Drop Shadow for Glass Plate -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
   </defs>
+
+  <!-- Base App Background (Squircle) -->
+  <rect width="512" height="512" rx="120" fill="url(#bg-grad)" stroke="#231A4A" stroke-width="2" />
   
-  <!-- Background -->
-  <rect width="512" height="512" rx="110" fill="url(#bgGradient)"/>
+  <!-- Glowing Background Orbs -->
+  <circle cx="120" cy="120" r="140" fill="#FF2E93" opacity="0.15" filter="url(#neon-glow-strong)" />
+  <circle cx="400" cy="380" r="150" fill="#00F0FF" opacity="0.12" filter="url(#neon-glow-strong)" />
+
+  <!-- Outer Soundwaves (Visualizer Rings) -->
+  <g opacity="0.25">
+    <circle cx="256" cy="256" r="180" stroke="url(#neon-cyan)" stroke-width="2" stroke-dasharray="10 15" filter="url(#neon-glow-subtle)" />
+    <circle cx="256" cy="256" r="210" stroke="url(#neon-pink)" stroke-width="1.5" stroke-dasharray="5 20" />
+  </g>
+
+  <!-- Central Glassmorphic Shield/Disc -->
+  <circle cx="256" cy="256" r="140" fill="url(#glass-grad)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5" filter="url(#shadow)" />
   
-  <!-- Inner glow circle -->
-  <circle cx="256" cy="256" r="180" fill="rgba(255,255,255,0.08)"/>
-  
-  <!-- Main Music Note -->
-  <g filter="url(#glow)">
-    <!-- Note stem and flag -->
-    <rect x="295" y="140" width="18" height="150" rx="9" fill="white" opacity="0.95"/>
-    <path d="M313 140 Q340 135 340 160 Q340 180 320 185 L313 175 Z" fill="white" opacity="0.95"/>
+  <!-- Inner Rim Light -->
+  <circle cx="256" cy="256" r="139" stroke="url(#neon-pink)" stroke-width="1" opacity="0.4" />
+
+  <!-- The Main Icon Motif: Futuristic "W" shaped Wave + Play Button -->
+  <g filter="url(#neon-glow-strong)">
+    <!-- Play Button in the center, overlapping the W -->
+    <polygon points="230,196 316,256 230,316" fill="url(#neon-cyan)" opacity="0.95" />
     
-    <!-- Note head (bottom) -->
-    <ellipse cx="304" cy="290" rx="32" ry="24" fill="white" opacity="0.95"/>
+    <!-- Dynamic stylized W (Music Wave/Equalizer style) -->
+    <!-- Left wing of W -->
+    <path d="M160,220 C180,180 200,320 220,280" stroke="url(#neon-pink)" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.9" />
+    <!-- Right wing of W -->
+    <path d="M292,232 C312,192 332,332 352,292" stroke="url(#neon-pink)" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.9" />
     
-    <!-- Second note stem -->
-    <rect x="190" y="180" width="16" height="140" rx="8" fill="white" opacity="0.9"/>
+    <!-- Connective bridge under play button -->
+    <path d="M220,280 C236,250 276,260 292,232" stroke="url(#neon-pink)" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.9" />
+  </g>
+
+  <!-- Decorative floating music elements / particles -->
+  <g filter="url(#neon-glow-subtle)">
+    <!-- Music note 1 -->
+    <path d="M370,140 L370,110 L400,100 L400,120 L370,130" fill="url(#accent-grad)" />
+    <circle cx="362" cy="140" r="8" fill="url(#accent-grad)" />
     
-    <!-- Second note head -->
-    <ellipse cx="198" cy="320" rx="28" ry="22" fill="white" opacity="0.9"/>
-    
-    <!-- Connecting beam -->
-    <path d="M313 160 L206 195 L206 180 L313 145 Z" fill="white" opacity="0.92"/>
+    <!-- Music note 2 (left) -->
+    <circle cx="120" cy="350" r="7" fill="url(#accent-grad)" />
+    <path d="M127,350 L127,325 L145,320 L145,335 L127,342" fill="url(#accent-grad)" />
   </g>
   
-  <!-- Play Button Circle -->
-  <circle cx="370" cy="380" r="58" fill="url(#playGradient)" filter="url(#glow)"/>
-  <path d="M358 365 L358 395 L388 380 Z" fill="white" opacity="0.98"/>
-  
-  <!-- Decorative sound waves -->
-  <path d="M140 230 Q145 240 140 250" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round" fill="none"/>
-  <path d="M120 220 Q127 240 120 260" stroke="rgba(255,255,255,0.2)" stroke-width="6" stroke-linecap="round" fill="none"/>
-  <path d="M385 140 Q390 150 385 160" stroke="rgba(255,255,255,0.25)" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <!-- Subtle top glare shine for realistic glass look -->
+  <path d="M136,200 C160,150 210,125 256,125 C302,125 352,150 376,200 C336,160 296,145 256,145 C216,145 176,160 136,200 Z" fill="#FFFFFF" opacity="0.12" />
 </svg>
