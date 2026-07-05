@@ -96,6 +96,20 @@ if (-not $SETUP) {
 $sizeMB = [math]::Round($SETUP.Length / 1MB, 1)
 Write-Ok "Build complete  ->  $($SETUP.Name)  ($sizeMB MB)  ($(Get-Elapsed $sw))"
 
+# ── cleanup old installers ───────────────────────────────────────────────────
+
+Write-Info "Removing old installer versions from dist_installer..."
+$oldFiles = Get-ChildItem $DIST -File | Where-Object {
+    ($_.Name -match 'Setup\.exe$' -or $_.Name -match '\.blockmap$') -and
+    $_.Name -notmatch [regex]::Escape($VERSION)
+}
+foreach ($f in $oldFiles) {
+    Remove-Item $f.FullName -Force -ErrorAction SilentlyContinue
+    Write-Info "Deleted $($f.Name)"
+}
+if ($oldFiles.Count -eq 0) { Write-Ok "No old versions found" }
+else { Write-Ok "Cleaned $($oldFiles.Count) old file(s)" }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 3 - git push + GitHub release upload (parallel)
 # ─────────────────────────────────────────────────────────────────────────────
