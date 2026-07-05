@@ -220,7 +220,6 @@ function rebuildContextMenu() {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Show We Plays',
-      icon: null,
       click: () => {
         if (mainWindow) {
           mainWindow.show();
@@ -230,19 +229,19 @@ function rebuildContextMenu() {
     },
     { type: 'separator' },
     {
-      label: isPlaying ? '⏸  Pause' : '▶  Play',
+      label: isPlaying ? 'Pause' : 'Play',
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-toggle-play');
       }
     },
     {
-      label: '⏭  Next Track',
+      label: 'Next Track',
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-next');
       }
     },
     {
-      label: '⏮  Previous Track',
+      label: 'Previous Track',
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-previous');
       }
