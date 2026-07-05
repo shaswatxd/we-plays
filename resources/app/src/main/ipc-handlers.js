@@ -586,9 +586,11 @@ function fetchLatestRelease() {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'api.github.com',
-      path: '/repos/shaswatxd/we-plays/releases/latest',
+      path: `/repos/shaswatxd/we-plays/releases/latest?t=${Date.now()}`,
       headers: {
-        'User-Agent': 'we-plays-updater'
+        'User-Agent': 'we-plays-updater',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       }
     };
 
