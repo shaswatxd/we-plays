@@ -35,6 +35,24 @@ Write-Host "========================================" -ForegroundColor Cyan
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
 
+Write-Info "Killing running processes..."
+Stop-Process -Name "We Plays" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "WePlays" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "electron" -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
+
+Write-Info "Clearing AppData cache..."
+$localAppData = $env:LOCALAPPDATA
+if ($localAppData) {
+    $caches = @("We Plays", "we-plays")
+    foreach ($cache in $caches) {
+        $dir = Join-Path $localAppData $cache
+        if (Test-Path $dir) {
+            Remove-Item -Recurse -Force $dir -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 $tauriFolder = Join-Path $APP "src-tauri"
 if (Test-Path $tauriFolder) {
     Write-Info "Removing leftover Tauri folder..."
