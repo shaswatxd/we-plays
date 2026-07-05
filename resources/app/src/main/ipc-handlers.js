@@ -18,7 +18,9 @@ function setupIpcHandlers(mainWindow, store) {
     if (mainWindow.isMaximized()) mainWindow.unmaximize();
     else mainWindow.maximize();
   });
-  ipcMain.handle('window-close', () => mainWindow.close());
+  ipcMain.handle('window-close', () => {
+    if (mainWindow) mainWindow.hide();
+  });
 
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximize-change', true));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximize-change', false));

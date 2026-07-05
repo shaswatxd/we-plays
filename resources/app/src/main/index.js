@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog, protocol, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const { initDatabase } = require('./library');
@@ -9,6 +9,8 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let mainWindow;
+let tray = null;
+let isQuitting = false;
 const store = new Store();
 
 function createWindow() {
@@ -47,11 +49,70 @@ function createWindow() {
     mainWindow.show();
   });
 
-  mainWindow.on('close', () => {
-    app.isQuitting = true;
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
   });
 
   registerGlobalShortcuts();
+  createTray();
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, '../../assets/icons/icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(icon);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show We Plays',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Play / Pause',
+      click: () => {
+        if (mainWindow) mainWindow.webContents.send('player-toggle-play');
+      }
+    },
+    {
+      label: 'Next Track',
+      click: () => {
+        if (mainWindow) mainWindow.webContents.send('player-next');
+      }
+    },
+    {
+      label: 'Previous Track',
+      click: () => {
+        if (mainWindow) mainWindow.webContents.send('player-previous');
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit We Plays',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setToolTip('We Plays');
+  tray.setContextMenu(contextMenu);
+
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 }
 
 function registerGlobalShortcuts() {
@@ -93,11 +154,15 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // Don't quit — tray keeps the app alive
 });
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 });
 
 module.exports = { mainWindow };
