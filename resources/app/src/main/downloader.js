@@ -174,19 +174,24 @@ function updateFfmpeg() {
             resp.pipe(file);
             file.on('finish', () => {
               file.close(() => {
-                // Use PowerShell to extract and copy ffmpeg.exe and ffprobe.exe
+                // Write a temp .ps1 script to avoid quoting issues with spaces in paths
                 const extractDir = path.join(localDir, 'ffmpeg-extract');
-                const psCmd = [
-                  `Expand-Archive -Path "${zipPath}" -DestinationPath "${extractDir}" -Force`,
-                  `$ffmpegFile = Get-ChildItem -Path "${extractDir}" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1`,
-                  `if ($ffmpegFile) { Copy-Item -Path $ffmpegFile.FullName -Destination "${targetPath}" -Force }`,
-                  `$ffprobeFile = Get-ChildItem -Path "${extractDir}" -Recurse -Filter "ffprobe.exe" | Select-Object -First 1`,
-                  `if ($ffprobeFile) { Copy-Item -Path $ffprobeFile.FullName -Destination "${path.join(localDir, 'ffprobe.exe')}" -Force }`,
-                  `Remove-Item -Path "${extractDir}" -Recurse -Force -ErrorAction SilentlyContinue`,
-                  `Remove-Item -Path "${zipPath}" -Force -ErrorAction SilentlyContinue`
-                ].join('; ');
+                const ffprobePath = path.join(localDir, 'ffprobe.exe');
+                const ps1Content = [
+                  `Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force`,
+                  `$f = Get-ChildItem -Path '${extractDir}' -Recurse -Filter 'ffmpeg.exe' | Select-Object -First 1`,
+                  `if ($f) { Copy-Item -Path $f.FullName -Destination '${targetPath}' -Force }`,
+                  `$p = Get-ChildItem -Path '${extractDir}' -Recurse -Filter 'ffprobe.exe' | Select-Object -First 1`,
+                  `if ($p) { Copy-Item -Path $p.FullName -Destination '${ffprobePath}' -Force }`,
+                  `Remove-Item -Path '${extractDir}' -Recurse -Force -ErrorAction SilentlyContinue`,
+                  `Remove-Item -Path '${zipPath}' -Force -ErrorAction SilentlyContinue`
+                ].join('\n');
 
-                exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCmd}"`, { windowsHide: true }, (err) => {
+                const ps1Path = path.join(localDir, 'ffmpeg-extract.ps1');
+                fs.writeFileSync(ps1Path, ps1Content, 'utf-8');
+
+                exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${ps1Path}"`, { windowsHide: true }, (err) => {
+                  try { fs.unlinkSync(ps1Path); } catch {}
                   if (err) {
                     try { fs.unlinkSync(zipPath); } catch {}
                     reject(new Error('Failed to extract ffmpeg: ' + err.message));
