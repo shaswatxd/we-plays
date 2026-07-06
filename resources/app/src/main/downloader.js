@@ -72,6 +72,145 @@ function getFfmpegPath() {
   }
 }
 
+function getFfmpegLocalDir() {
+  const localAppData = process.env.LOCALAPPDATA || path.join(require('os').homedir(), 'AppData', 'Local');
+  return path.join(localAppData, 'We Plays', 'binaries');
+}
+
+function getFfmpegVersion() {
+  return new Promise((resolve) => {
+    const ffmpegPath = getFfmpegPath();
+    if (!ffmpegPath) {
+      resolve('Not installed');
+      return;
+    }
+    try {
+      const output = execSync(`"${ffmpegPath}" -version`, { windowsHide: true }).toString();
+      const match = output.match(/ffmpeg version (\S+)/);
+      resolve(match ? match[1] : 'Unknown');
+    } catch {
+      resolve('Unknown');
+    }
+  });
+}
+
+function updateFfmpeg() {
+  return new Promise((resolve, reject) => {
+    const isWin = process.platform === 'win32';
+    if (!isWin) {
+      reject(new Error('Auto-update of ffmpeg is only supported on Windows'));
+      return;
+    }
+
+    const localDir = getFfmpegLocalDir();
+    const targetPath = path.join(localDir, 'ffmpeg.exe');
+
+    if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+
+    // Get current version
+    let currentVer = '';
+    try {
+      if (fs.existsSync(targetPath)) {
+        const output = execSync(`"${targetPath}" -version`, { windowsHide: true }).toString();
+        const match = output.match(/ffmpeg version (\S+)/);
+        currentVer = match ? match[1] : '';
+      }
+    } catch {}
+
+    // Fetch latest release from BtbN/FFmpeg-Builds
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/BtbN/FFmpeg-Builds/releases/latest',
+      headers: { 'User-Agent': 'WePlays-App' }
+    };
+
+    https.get(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try {
+          const release = JSON.parse(data);
+          const latestVer = release.tag_name || '';
+
+          if (currentVer && latestVer && currentVer === latestVer) {
+            resolve('ffmpeg is up to date');
+            return;
+          }
+
+          // Find the Windows 64-bit GPL zip asset
+          const asset = release.assets.find(a =>
+            a.name.includes('win64-gpl') && a.name.endsWith('.zip')
+          );
+          if (!asset) {
+            reject(new Error('Windows ffmpeg build not found in release'));
+            return;
+          }
+
+          function followRedirects(url, callback) {
+            const parsedUrl = new URL(url);
+            const opts = {
+              hostname: parsedUrl.hostname,
+              path: parsedUrl.pathname + parsedUrl.search,
+              headers: { 'User-Agent': 'WePlays-App' }
+            };
+            https.get(opts, (resp) => {
+              if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
+                followRedirects(resp.headers.location, callback);
+              } else {
+                callback(resp);
+              }
+            }).on('error', reject);
+          }
+
+          // Download zip
+          followRedirects(asset.browser_download_url, (resp) => {
+            if (resp.statusCode !== 200) {
+              reject(new Error(`Download failed with status ${resp.statusCode}`));
+              return;
+            }
+
+            const zipPath = path.join(localDir, 'ffmpeg-update.zip');
+            const file = fs.createWriteStream(zipPath);
+            resp.pipe(file);
+            file.on('finish', () => {
+              file.close(() => {
+                // Use PowerShell to extract and copy ffmpeg.exe and ffprobe.exe
+                const extractDir = path.join(localDir, 'ffmpeg-extract');
+                const psCmd = [
+                  `Expand-Archive -Path "${zipPath}" -DestinationPath "${extractDir}" -Force`,
+                  `$ffmpegFile = Get-ChildItem -Path "${extractDir}" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1`,
+                  `if ($ffmpegFile) { Copy-Item -Path $ffmpegFile.FullName -Destination "${targetPath}" -Force }`,
+                  `$ffprobeFile = Get-ChildItem -Path "${extractDir}" -Recurse -Filter "ffprobe.exe" | Select-Object -First 1`,
+                  `if ($ffprobeFile) { Copy-Item -Path $ffprobeFile.FullName -Destination "${path.join(localDir, 'ffprobe.exe')}" -Force }`,
+                  `Remove-Item -Path "${extractDir}" -Recurse -Force -ErrorAction SilentlyContinue`,
+                  `Remove-Item -Path "${zipPath}" -Force -ErrorAction SilentlyContinue`
+                ].join('; ');
+
+                exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCmd}"`, { windowsHide: true }, (err) => {
+                  if (err) {
+                    try { fs.unlinkSync(zipPath); } catch {}
+                    reject(new Error('Failed to extract ffmpeg: ' + err.message));
+                    return;
+                  }
+                  resolve(`ffmpeg updated to ${latestVer}`);
+                });
+              });
+            });
+            file.on('error', (err) => {
+              try { fs.unlinkSync(zipPath); } catch {}
+              reject(err);
+            });
+          });
+        } catch (e) {
+          reject(new Error('Failed to check for ffmpeg updates: ' + e.message));
+        }
+      });
+    }).on('error', (err) => {
+      reject(new Error('Network error: ' + err.message));
+    });
+  });
+}
+
 function searchYouTubeMusic(query) {
   // Return cached results if fresh
   const cacheKey = query.toLowerCase().trim();
@@ -596,4 +735,4 @@ function getAudioFingerprint(filePath) {
   });
 }
 
-module.exports = { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getYtdlpPath, getFfmpegPath, getStreamUrl, getPlaylistInfo, getAudioFingerprint };
+module.exports = { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getYtdlpPath, getFfmpegPath, getFfmpegVersion, updateFfmpeg, getStreamUrl, getPlaylistInfo, getAudioFingerprint };

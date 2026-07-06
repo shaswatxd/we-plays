@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const http = require('http');
 const os = require('os');
 const https = require('https');
-const { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getFfmpegPath, getStreamUrl, getPlaylistInfo, getAudioFingerprint } = require('./downloader');
+const { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getFfmpegPath, getFfmpegVersion, updateFfmpeg, getStreamUrl, getPlaylistInfo, getAudioFingerprint } = require('./downloader');
 const library = require('./library');
 
 let activeDownloads = new Map();
@@ -267,6 +267,8 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
   ipcMain.handle('update-ytdlp', () => updateYtdlp());
   ipcMain.handle('get-ytdlp-version', () => getYtdlpVersion());
   ipcMain.handle('get-ffmpeg-path', () => getFfmpegPath());
+  ipcMain.handle('get-ffmpeg-version', () => getFfmpegVersion());
+  ipcMain.handle('update-ffmpeg', () => updateFfmpeg());
   ipcMain.handle('get-stream-url', (event, url) => getStreamUrl(url));
 
   ipcMain.handle('import-folder', async () => {

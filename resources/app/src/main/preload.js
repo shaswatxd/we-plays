@@ -57,6 +57,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateYtdlp: () => ipcRenderer.invoke('update-ytdlp'),
   getYtdlpVersion: () => ipcRenderer.invoke('get-ytdlp-version'),
   getFfmpegPath: () => ipcRenderer.invoke('get-ffmpeg-path'),
+  getFfmpegVersion: () => ipcRenderer.invoke('get-ffmpeg-version'),
+  updateFfmpeg: () => ipcRenderer.invoke('update-ffmpeg'),
   getStreamUrl: (url) => ipcRenderer.invoke('get-stream-url', url),
 
   // Playlists extended

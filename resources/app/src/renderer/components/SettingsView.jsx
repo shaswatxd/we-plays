@@ -9,7 +9,9 @@ export default function SettingsView() {
   const [quality,  setQuality]  = useState(320);
   const [ytdlpVer, setYtdlpVer] = useState('Checking…');
   const [ffmpegP,  setFfmpegP]  = useState('Checking…');
+  const [ffmpegVer, setFfmpegVer] = useState('Checking…');
   const [updating, setUpdating] = useState(false);
+  const [updatingFfmpeg, setUpdatingFfmpeg] = useState(false);
 
   // App Auto-Updater states
   const [appVersion, setAppVersion] = useState('Loading…');
@@ -59,8 +61,9 @@ export default function SettingsView() {
     try {
       const v = await window.electronAPI?.getYtdlpVersion();
       const f = await window.electronAPI?.getFfmpegPath();
-      setYtdlpVer(v || 'Not found'); setFfmpegP(f || 'Not found');
-    } catch { setYtdlpVer('Error'); setFfmpegP('Error'); }
+      const fv = await window.electronAPI?.getFfmpegVersion();
+      setYtdlpVer(v || 'Not found'); setFfmpegP(f || 'Not found'); setFfmpegVer(fv || 'Unknown');
+    } catch { setYtdlpVer('Error'); setFfmpegP('Error'); setFfmpegVer('Error'); }
   };
 
   const browse = async () => {
@@ -77,6 +80,17 @@ export default function SettingsView() {
     } catch (e) {
       window.showToast?.(`Update failed: ${e.message}`, 'error');
     } finally { setUpdating(false); }
+  };
+
+  const updateFfmpeg = async () => {
+    setUpdatingFfmpeg(true);
+    try {
+      const msg = await window.electronAPI?.updateFfmpeg();
+      window.showToast?.(msg || 'ffmpeg updated', 'success');
+      await checkBins();
+    } catch (e) {
+      window.showToast?.(`Update failed: ${e.message}`, 'error');
+    } finally { setUpdatingFfmpeg(false); }
   };
 
   const checkAppUpdate = async () => {
@@ -1026,7 +1040,11 @@ export default function SettingsView() {
             <span className="sp-settings-key">ffmpeg path</span>
             <span className="sp-mono">{ffmpegP}</span>
           </div>
-          <div className="sp-settings-row" style={{ borderBottom:'none' }}>
+          <div className="sp-settings-row">
+            <span className="sp-settings-key">ffmpeg version</span>
+            <span className="sp-mono">{ffmpegVer}</span>
+          </div>
+          <div className="sp-settings-row">
             <span className="sp-settings-key">Update yt-dlp</span>
             <button
               onClick={updateYt}
@@ -1035,6 +1053,17 @@ export default function SettingsView() {
             >
               <RefreshCw size={13} style={updating ? { animation:'spin 0.9s linear infinite' } : {}} />
               {updating ? 'Updating…' : 'Update Now'}
+            </button>
+          </div>
+          <div className="sp-settings-row" style={{ borderBottom:'none' }}>
+            <span className="sp-settings-key">Update ffmpeg</span>
+            <button
+              onClick={updateFfmpeg}
+              disabled={updatingFfmpeg}
+              style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'#b3b3b3',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12 }}
+            >
+              <RefreshCw size={13} style={updatingFfmpeg ? { animation:'spin 0.9s linear infinite' } : {}} />
+              {updatingFfmpeg ? 'Updating…' : 'Update Now'}
             </button>
           </div>
         </div>
