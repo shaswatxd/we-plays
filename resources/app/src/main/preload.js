@@ -90,6 +90,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   updateSongGain: (id, gain) => ipcRenderer.invoke('update-song-gain', id, gain),
   updateSongRating: (id, rating) => ipcRenderer.invoke('update-song-rating', id, rating),
+  updateSongMetadata: (id, meta) => ipcRenderer.invoke('update-song-metadata', id, meta),
 
   // Auto-Tag
   autoTagSong: (data) => ipcRenderer.invoke('auto-tag-song', data),

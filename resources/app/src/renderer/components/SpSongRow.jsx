@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
-import { Play, Download, Plus, Trash2, Folder, MoreVertical, Music } from 'lucide-react';
+import { Play, Download, Plus, Trash2, Folder, MoreVertical, Music, Bookmark, Fingerprint } from 'lucide-react';
 import SpotifyHeart from './SpotifyHeart';
 
 export default React.memo(function SpSongRow({ song, index, isSearchItem, onDownloadTrigger, onRemovePlaylistSong, onClick }) {
-  const { currentSong, isPlaying, playSong, addToQueue } = usePlayerStore();
+  const { currentSong, isPlaying, playSong, addToQueue, progress } = usePlayerStore();
   const { toggleFavorite, removeSong, playlists, addToPlaylist } = useLibraryStore();
   const [showMenu, setShowMenu]   = useState(false);
   const [menuPos,  setMenuPos]    = useState({ x: 0, y: 0 });
   const [showDel,  setShowDel]    = useState(false);
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [bookmarkLabel, setBookmarkLabel] = useState('');
   const menuRef = useRef(null);
 
   const isActive = currentSong && (
@@ -54,6 +56,18 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
     setShowDel(false);
     await removeSong(song.id);
     window.showToast?.('Song removed from library', 'info');
+  };
+
+  const saveBookmark = async () => {
+    const isActive = currentSong && (
+      (song.yt_id && currentSong.yt_id === song.yt_id) ||
+      (song.id && currentSong.id === song.id)
+    );
+    const position = isActive ? (progress || 0) : 0;
+    await window.electronAPI?.saveBookmark(song.id, position, bookmarkLabel.trim() || null);
+    window.showToast?.('Bookmark saved!', 'success');
+    setShowBookmarkModal(false);
+    setBookmarkLabel('');
   };
 
   const fmt = (s) => {
@@ -178,6 +192,22 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
               <Plus size={14}/> Add to Queue
             </button>
           )}
+          {!isSearchItem && song.id && (
+            <button className="sp-ctx-item" onClick={() => {
+              setShowMenu(false);
+              setShowBookmarkModal(true);
+            }}>
+              <Bookmark size={14}/> Save Bookmark
+            </button>
+          )}
+          {!isSearchItem && song.file_path && (
+            <button className="sp-ctx-item" onClick={() => {
+              setShowMenu(false);
+              window.showFingerprintModal?.(song);
+            }}>
+              <Fingerprint size={14}/> Identify Song
+            </button>
+          )}
 
           {isSearchItem && (
             <button className="sp-ctx-item" onClick={() => { onDownloadTrigger?.(song); setShowMenu(false); }}>
@@ -242,6 +272,42 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
                 style={{ background:'#e91429',border:'none',color:'#fff',padding:'10px 24px',borderRadius:99,cursor:'pointer',fontWeight:700,fontSize:13,display:'flex',alignItems:'center',gap:8 }}
                 onClick={confirmDelete}
               ><Trash2 size={14}/> Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bookmark Modal */}
+      {showBookmarkModal && (
+        <div className="sp-modal-bg" onClick={() => setShowBookmarkModal(false)}>
+          <div className="sp-modal" style={{ maxWidth:380 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <div style={{ width:40,height:40,borderRadius:'50%',background:'rgba(29,185,84,0.12)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                <Bookmark size={18} style={{ color:'#1db954' }}/>
+              </div>
+              <div>
+                <p style={{ fontWeight:700, fontSize:15 }}>Save Bookmark</p>
+                <p style={{ fontSize:12, color:'#b3b3b3', marginTop:2 }}>{song.title}</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="Label (optional)"
+              value={bookmarkLabel}
+              onChange={e => setBookmarkLabel(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveBookmark(); }}
+              autoFocus
+              style={{ width:'100%',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'#fff',padding:'10px 14px',borderRadius:8,fontSize:13,outline:'none',marginBottom:16,boxSizing:'border-box' }}
+            />
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button
+                style={{ background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'#b3b3b3',padding:'10px 20px',borderRadius:99,cursor:'pointer',fontWeight:700,fontSize:13 }}
+                onClick={() => { setShowBookmarkModal(false); setBookmarkLabel(''); }}
+              >Cancel</button>
+              <button
+                style={{ background:'#1db954',border:'none',color:'#000',padding:'10px 24px',borderRadius:99,cursor:'pointer',fontWeight:700,fontSize:13,display:'flex',alignItems:'center',gap:8 }}
+                onClick={saveBookmark}
+              ><Bookmark size={14}/> Save</button>
             </div>
           </div>
         </div>

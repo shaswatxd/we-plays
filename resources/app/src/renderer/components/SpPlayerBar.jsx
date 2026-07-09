@@ -4,7 +4,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Volume2, VolumeX,
-  Maximize2, Music, Mic2
+  Maximize2, Music, Mic2, Bookmark
 } from 'lucide-react';
 import { Howl } from 'howler';
 import SpotifyHeart from './SpotifyHeart';
@@ -12,10 +12,10 @@ import SpotifyHeart from './SpotifyHeart';
 export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
   const {
     currentSong, isPlaying, volume, isMuted,
-    progress, duration, isShuffled, repeatMode,
+    progress, duration, isShuffled, repeatMode, gaplessEnabled,
     setHowl, togglePlay, nextTrack, previousTrack,
     seekTo, setVolume, toggleMute, toggleShuffle,
-    toggleRepeat, setProgress, setDuration,
+    toggleRepeat, setProgress, setDuration, toggleGapless,
     playTrigger, isManualTransition
   } = usePlayerStore();
 
@@ -26,6 +26,10 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
   const crossfadingRef = useRef(false);
   const CROSSFADE_MS = 3000;
   const CROSSFADE_SEC = 3;
+  const eqFiltersRef = useRef({ low: null, mid: null, high: null });
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [bookmarkLabel, setBookmarkLabel] = useState('');
+  const [showEq, setShowEq] = useState(false);
 
   /* ── Playback ── */
   const playSong = async (song, isManual = false) => {
@@ -104,11 +108,50 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
 
     howlRef.current = h;
     setHowl(h);
+
+    // Connect to EQ filters via Web Audio API
+    try {
+      if (h._sounds && h._sounds[0] && h._sounds[0]._node) {
+        const audioNode = h._sounds[0]._node;
+        const audioCtx = audioNode.context || h._sounds[0]._parent?._ctx;
+        if (audioCtx && audioNode.connect) {
+          // Disconnect existing connections
+          try { audioNode.disconnect(); } catch(_) {}
+          
+          const low = audioCtx.createBiquadFilter();
+          low.type = 'lowshelf';
+          low.frequency.value = 320;
+          const { eq } = usePlayerStore.getState();
+          low.gain.value = eq.low || 0;
+          
+          const mid = audioCtx.createBiquadFilter();
+          mid.type = 'peaking';
+          mid.frequency.value = 1000;
+          mid.Q.value = 0.7;
+          mid.gain.value = eq.mid || 0;
+          
+          const high = audioCtx.createBiquadFilter();
+          high.type = 'highshelf';
+          high.frequency.value = 3200;
+          high.gain.value = eq.high || 0;
+          
+          audioNode.connect(low);
+          low.connect(mid);
+          mid.connect(high);
+          high.connect(audioCtx.destination);
+          
+          eqFiltersRef.current = { low, mid, high };
+        }
+      }
+    } catch (e) {
+      console.error('EQ connection error:', e);
+    }
     
     // Play/fade-in based on manual trigger, only if play state is active
     const isCurrentlyPlaying = usePlayerStore.getState().isPlaying;
+    const { gaplessEnabled } = usePlayerStore.getState();
     if (isCurrentlyPlaying) {
-      if (isManual) {
+      if (isManual || gaplessEnabled) {
         h.play();
       } else {
         h.volume(0);
@@ -160,8 +203,9 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
         const cur = howlRef.current.seek();
         setProgress(cur);
 
-        // Auto crossfade trigger (only when duration is meaningful)
-        if (duration > CROSSFADE_SEC && (duration - cur) <= CROSSFADE_SEC && !crossfadingRef.current) {
+        const { gaplessEnabled } = usePlayerStore.getState();
+        // Auto crossfade trigger (only when gapless is disabled and duration is meaningful)
+        if (!gaplessEnabled && duration > CROSSFADE_SEC && (duration - cur) <= CROSSFADE_SEC && !crossfadingRef.current) {
           crossfadingRef.current = true;
           nextTrack();
         }
@@ -283,6 +327,14 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
     }));
   };
 
+  const saveBookmark = async () => {
+    if (!currentSong?.id) return;
+    await window.electronAPI?.saveBookmark(currentSong.id, progress || 0, bookmarkLabel.trim() || null);
+    window.showToast?.('Bookmark saved!', 'success');
+    setShowBookmarkModal(false);
+    setBookmarkLabel('');
+  };
+
   return (
     <div className="sp-player">
       {/* ── Left: Now playing ── */}
@@ -307,6 +359,16 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
             >
               <SpotifyHeart size={16} active={isFav} />
             </button>
+            {currentSong?.id && (
+              <button
+                className="sp-ctrl-btn"
+                onClick={() => setShowBookmarkModal(true)}
+                title="Save Bookmark"
+                style={{ marginLeft: 4 }}
+              >
+                <Bookmark size={15} />
+              </button>
+            )}
           </>
         ) : (
           <div style={{ display:'flex', alignItems:'center', gap: 12 }}>
@@ -381,6 +443,15 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
       {/* ── Right: Volume ── */}
       <div className="sp-player-right">
         <button
+          className={`sp-ctrl-btn${gaplessEnabled ? ' active' : ''}`}
+          onClick={toggleGapless}
+          title={gaplessEnabled ? 'Gapless: ON' : 'Gapless: OFF (Crossfade)'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12h4l3-9 4 18 3-9h4"/>
+          </svg>
+        </button>
+        <button
           className="sp-ctrl-btn"
           onClick={onToggleVis}
           title="Visualizer"
@@ -404,6 +475,43 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
           </div>
         </div>
       </div>
+
+      {/* Bookmark Modal */}
+      {showBookmarkModal && currentSong && (
+        <div className="sp-modal-bg" onClick={() => setShowBookmarkModal(false)}>
+          <div className="sp-modal" style={{ maxWidth:380 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <div style={{ width:40,height:40,borderRadius:'50%',background:'rgba(29,185,84,0.12)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                <Bookmark size={18} style={{ color:'#1db954' }}/>
+              </div>
+              <div>
+                <p style={{ fontWeight:700, fontSize:15 }}>Save Bookmark</p>
+                <p style={{ fontSize:12, color:'#b3b3b3', marginTop:2 }}>{currentSong.title}</p>
+              </div>
+            </div>
+            <p style={{ fontSize:12, color:'#6a6a6a', marginBottom:8 }}>Position: {fmt(progress)}</p>
+            <input
+              type="text"
+              placeholder="Label (optional)"
+              value={bookmarkLabel}
+              onChange={e => setBookmarkLabel(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveBookmark(); }}
+              autoFocus
+              style={{ width:'100%',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'#fff',padding:'10px 14px',borderRadius:8,fontSize:13,outline:'none',marginBottom:16,boxSizing:'border-box' }}
+            />
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button
+                style={{ background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'#b3b3b3',padding:'10px 20px',borderRadius:99,cursor:'pointer',fontWeight:700,fontSize:13 }}
+                onClick={() => { setShowBookmarkModal(false); setBookmarkLabel(''); }}
+              >Cancel</button>
+              <button
+                style={{ background:'#1db954',border:'none',color:'#000',padding:'10px 24px',borderRadius:99,cursor:'pointer',fontWeight:700,fontSize:13,display:'flex',alignItems:'center',gap:8 }}
+                onClick={saveBookmark}
+              ><Bookmark size={14}/> Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

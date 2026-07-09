@@ -407,6 +407,7 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
 
   ipcMain.handle('update-song-gain', (event, id, gain) => library.updateSongGain(id, gain));
   ipcMain.handle('update-song-rating', (event, id, rating) => library.updateSongRating(id, rating));
+  ipcMain.handle('update-song-metadata', (event, id, meta) => library.updateSongMetadata(id, meta));
 
   // Auto-Tag via MusicBrainz
   ipcMain.handle('auto-tag-song', async (event, songData) => {

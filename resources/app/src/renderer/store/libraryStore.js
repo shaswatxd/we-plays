@@ -176,6 +176,15 @@ export const useLibraryStore = create((set, get) => ({
     }
   },
 
+  reorderPlaylistSongs: async (playlistId, songIds) => {
+    try {
+      await window.electronAPI?.reorderPlaylistSongs(playlistId, songIds);
+      await get().loadPlaylistSongs(playlistId);
+    } catch (err) {
+      console.error('Failed to reorder playlist songs:', err);
+    }
+  },
+
   loadSmartPlaylists: async () => {
     try {
       const data = await window.electronAPI?.getSmartPlaylists();

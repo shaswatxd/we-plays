@@ -22,6 +22,7 @@ import ArtistView   from './components/ArtistView';
 import AlbumView    from './components/AlbumView';
 import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
+import FingerprintModal from './components/FingerprintModal';
 
 export default function App() {
   const [view,       setView]       = useState('search');
@@ -34,6 +35,7 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [missingBins, setMissingBins] = useState(null); // { ytdlp: bool, ffmpeg: bool }
+  const [fpSong, setFpSong] = useState(null);
   const toastRef = React.useRef(null);
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
@@ -114,7 +116,8 @@ export default function App() {
       setToast({ msg, type });
       toastRef.current = setTimeout(() => setToast(null), 3000);
     };
-    return () => { window.showToast = null; clearTimeout(toastRef.current); };
+    window.showFingerprintModal = (song) => setFpSong(song);
+    return () => { window.showToast = null; window.showFingerprintModal = null; clearTimeout(toastRef.current); };
   }, []);
 
   const openPlaylist = React.useCallback((id) => { setPlaylistId(id); setView('playlist'); }, []);
@@ -220,6 +223,20 @@ export default function App() {
         <DownloadModal song={dlSong} onClose={() => setDlSong(null)} />
       )}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {fpSong && (
+        <FingerprintModal
+          song={fpSong}
+          onClose={() => setFpSong(null)}
+          onApplyTags={async (tags) => {
+            if (fpSong?.id && tags) {
+              await window.electronAPI?.updateSongMetadata?.(fpSong.id, tags);
+              useLibraryStore.getState().loadLibrary();
+              window.showToast?.('Tags updated!', 'success');
+            }
+            setFpSong(null);
+          }}
+        />
+      )}
       {toast && (
         <div
           className="sp-toast"

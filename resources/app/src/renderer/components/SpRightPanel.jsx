@@ -17,11 +17,12 @@ export default function SpRightPanel({ onClose }) {
   const { queue, queueIndex, currentSong, playSong, removeFromQueue, clearQueue, reorderQueue, playHistory, clearPlayHistory } = usePlayerStore();
   const { downloads, clearCompleted, cancelDownload, removeDownload } = useDownloadStore();
   const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
   const active = downloads.filter(d => d.status === 'downloading').length;
 
-  const handleQueueDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; };
-  const handleQueueDragOver = (e, idx) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== idx) reorderQueue(dragIdx, idx); };
-  const handleQueueDragEnd = () => { setDragIdx(null); };
+  const handleQueueDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); };
+  const handleQueueDragOver = (e, idx) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIdx(idx); if (dragIdx !== null && dragIdx !== idx) reorderQueue(dragIdx, idx); };
+  const handleQueueDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   return (
     <div className="sp-right-panel">
@@ -81,7 +82,7 @@ export default function SpRightPanel({ onClose }) {
                   return (
                     <div
                       key={`${i}-${s.id}`}
-                      className="sp-queue-item"
+                      className={`sp-queue-item${dragIdx === i ? ' dragging' : ''}${dragOverIdx === i && dragIdx !== i ? ' drag-over' : ''}`}
                       draggable
                       onDragStart={(e) => handleQueueDragStart(e, i)}
                       onDragOver={(e) => handleQueueDragOver(e, i)}

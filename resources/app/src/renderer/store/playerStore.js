@@ -1,5 +1,26 @@
 import { create } from 'zustand';
 
+const updateMediaSession = (song, isPlaying, duration) => {
+  if (!('mediaSession' in navigator)) return;
+  if (song) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song.title || 'Unknown',
+      artist: song.artist || 'Unknown',
+      album: song.album || 'We Plays',
+      artwork: song.thumbnail ? [{ src: song.thumbnail, sizes: '512x512', type: 'image/jpeg' }] : []
+    });
+  }
+  navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  if (duration > 0) {
+    const pos = usePlayerStore.getState().progress || 0;
+    navigator.mediaSession.setPositionState({
+      duration: duration,
+      playbackRate: 1,
+      position: pos
+    });
+  }
+};
+
 export const usePlayerStore = create((set, get) => ({
   currentSong: null,
   queue: [],
@@ -36,6 +57,7 @@ export const usePlayerStore = create((set, get) => ({
       newQueue.splice(queueIndex + 1, 0, song);
       set(state => ({ queue: newQueue, queueIndex: queueIndex + 1, currentSong: song, isPlaying: true, progress: 0, duration: 0, isManualTransition: true, playTrigger: state.playTrigger + 1 }));
     }
+    updateMediaSession(song, true, song.duration || 0);
     if (window.electronAPI && song.id && !song.isFromSearch) {
       window.electronAPI.updatePlayCount(song.id);
       window.electronAPI.addToHistory(song.id);
@@ -61,7 +83,7 @@ export const usePlayerStore = create((set, get) => ({
   },
 
   togglePlay: () => {
-    const { isPlaying, howl } = get();
+    const { isPlaying, howl, currentSong, duration } = get();
     if (howl) {
       if (isPlaying) {
         howl.pause();
@@ -69,7 +91,9 @@ export const usePlayerStore = create((set, get) => ({
         howl.play();
       }
     }
-    set({ isPlaying: !isPlaying });
+    const newPlaying = !isPlaying;
+    set({ isPlaying: newPlaying });
+    updateMediaSession(currentSong, newPlaying, duration);
   },
 
   nextTrack: (isManual = false) => {
@@ -86,6 +110,7 @@ export const usePlayerStore = create((set, get) => ({
     const nextSong = queue[nextIdx];
     if (!nextSong) return;
     set(state => ({ queueIndex: nextIdx, currentSong: nextSong, isPlaying: true, progress: 0, duration: 0, isManualTransition: isManual, playTrigger: state.playTrigger + 1 }));
+    updateMediaSession(nextSong, true, nextSong.duration || 0);
     if (window.electronAPI && nextSong.id && !nextSong.isFromSearch) {
       window.electronAPI.updatePlayCount(nextSong.id);
       window.electronAPI.addToHistory(nextSong.id);
@@ -109,6 +134,7 @@ export const usePlayerStore = create((set, get) => ({
     if (!prevSong) return;
 
     set(state => ({ queueIndex: prevIdx, currentSong: prevSong, isPlaying: true, progress: 0, duration: 0, isManualTransition: true, playTrigger: state.playTrigger + 1 }));
+    updateMediaSession(prevSong, true, prevSong.duration || 0);
 
     if (window.electronAPI && prevSong.id && !prevSong.isFromSearch) {
       window.electronAPI.updatePlayCount(prevSong.id);
@@ -140,7 +166,13 @@ export const usePlayerStore = create((set, get) => ({
     set({ isMuted: !isMuted });
   },
 
-  setDuration: (duration) => set({ duration }),
+  setDuration: (duration) => {
+    set({ duration });
+    const { currentSong, isPlaying } = get();
+    if (currentSong && duration > 0) {
+      updateMediaSession(currentSong, isPlaying, duration);
+    }
+  },
   setProgress: (progress) => set({ progress }),
 
   toggleShuffle: () => set(state => ({ isShuffled: !state.isShuffled })),
@@ -188,3 +220,51 @@ export const usePlayerStore = create((set, get) => ({
     return { queue: newQueue, queueIndex: newQueueIndex };
   }),
 }));
+
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', () => {
+    const { isPlaying, howl, currentSong, duration } = usePlayerStore.getState();
+    if (howl && !isPlaying) {
+      howl.play();
+      usePlayerStore.setState({ isPlaying: true });
+      updateMediaSession(currentSong, true, duration);
+    }
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    const { isPlaying, howl, currentSong, duration } = usePlayerStore.getState();
+    if (howl && isPlaying) {
+      howl.pause();
+      usePlayerStore.setState({ isPlaying: false });
+      updateMediaSession(currentSong, false, duration);
+    }
+  });
+  navigator.mediaSession.setActionHandler('previoustrack', () => {
+    usePlayerStore.getState().previousTrack();
+  });
+  navigator.mediaSession.setActionHandler('nexttrack', () => {
+    usePlayerStore.getState().nextTrack(true);
+  });
+  navigator.mediaSession.setActionHandler('seekto', (details) => {
+    const { howl } = usePlayerStore.getState();
+    if (howl && details.seekTime != null) {
+      howl.seek(details.seekTime);
+      usePlayerStore.setState({ progress: details.seekTime });
+    }
+  });
+  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+    const { howl, progress } = usePlayerStore.getState();
+    if (howl) {
+      const seekTo = Math.max(0, progress - (details.seekOffset || 10));
+      howl.seek(seekTo);
+      usePlayerStore.setState({ progress: seekTo });
+    }
+  });
+  navigator.mediaSession.setActionHandler('seekforward', (details) => {
+    const { howl, progress, duration } = usePlayerStore.getState();
+    if (howl) {
+      const seekTo = Math.min(duration, progress + (details.seekOffset || 10));
+      howl.seek(seekTo);
+      usePlayerStore.setState({ progress: seekTo });
+    }
+  });
+}

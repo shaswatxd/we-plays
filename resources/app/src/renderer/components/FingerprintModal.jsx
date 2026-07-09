@@ -57,7 +57,7 @@ export default function FingerprintModal({ song, onClose, onApplyTags }) {
   const applyTags = async (candidate) => {
     setApplying(candidate.mbid);
     try {
-      await onApplyTags?.(song.id, {
+      await onApplyTags?.({
         title: candidate.title,
         artist: candidate.artist,
         album: candidate.album,
