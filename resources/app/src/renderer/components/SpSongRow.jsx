@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
@@ -36,6 +36,20 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
     };
   }, [showMenu]);
 
+  // Clamp against the real rendered size (menu height varies with playlist
+  // count) instead of a guessed height, and flip above the click point when
+  // there isn't room below, so every item stays reachable without scrolling.
+  useLayoutEffect(() => {
+    if (!showMenu || !menuRef.current) return;
+    const margin = 8;
+    const rect = menuRef.current.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let { x, y } = menuPos;
+    if (x + rect.width + margin > vw) x = Math.max(margin, vw - rect.width - margin);
+    if (y + rect.height + margin > vh) y = Math.max(margin, vh - rect.height - margin);
+    if (x !== menuPos.x || y !== menuPos.y) setMenuPos({ x, y });
+  }, [showMenu, menuPos]);
+
   const play = (e) => {
     e?.stopPropagation();
     if (showMenu) return;
@@ -53,11 +67,9 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
 
   const openMenu = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const vw = window.innerWidth; const vh = window.innerHeight;
-    let x = e.clientX, y = e.clientY;
-    if (x + 210 > vw) x = vw - 215;
-    if (y + 320 > vh) y = vh - 325;
-    setMenuPos({ x, y });
+    // Rough initial placement; the layout effect above re-clamps it against
+    // the menu's real measured size once it mounts.
+    setMenuPos({ x: e.clientX, y: e.clientY });
     setShowMenu(true);
   };
 
