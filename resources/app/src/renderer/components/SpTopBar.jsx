@@ -6,7 +6,7 @@ export default function SpTopBar({ view, showPanel, onTogglePanel, onGlobalSearc
   const [mode, setMode] = useState('all');
   const timer = useRef(null);
 
-  const hideSearch = view === 'favorites' || view === 'playlist' || view === 'recent';
+  const hideSearch = false;
 
   const fire = (val) => {
     if (val.trim().length >= 2) {
