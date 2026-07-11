@@ -24,7 +24,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
     const close = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
     };
-    setTimeout(() => document.addEventListener('mousedown', close), 0);
+    document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [showMenu]);
 
@@ -59,10 +59,6 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
   };
 
   const saveBookmark = async () => {
-    const isActive = currentSong && (
-      (song.yt_id && currentSong.yt_id === song.yt_id) ||
-      (song.id && currentSong.id === song.id)
-    );
     const position = isActive ? (progress || 0) : 0;
     await window.electronAPI?.saveBookmark(song.id, position, bookmarkLabel.trim() || null);
     window.showToast?.('Bookmark saved!', 'success');

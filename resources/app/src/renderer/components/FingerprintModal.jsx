@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Fingerprint, Search, CheckCircle, XCircle, Loader2, AlertCircle, Tag } from 'lucide-react';
+import { Fingerprint, Search, XCircle, Loader2, AlertCircle, Tag } from 'lucide-react';
 
 const ACOUSTID_CLIENT = '8XaBELgH'; // public demo key
 

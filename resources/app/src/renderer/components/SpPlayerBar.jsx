@@ -233,7 +233,6 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
     const h = (e) => {
       if (e.target.tagName === 'INPUT') return;
       const { volume: vol, duration: dur } = usePlayerStore.getState();
-      if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
       if (e.code === 'ArrowRight') seekTo(Math.min(dur, (howlRef.current?.seek() || 0) + 10));
       if (e.code === 'ArrowLeft')  seekTo(Math.max(0, (howlRef.current?.seek() || 0) - 10));
       if (e.code === 'ArrowUp')    { e.preventDefault(); setVolume(Math.min(1, vol + 0.05)); }

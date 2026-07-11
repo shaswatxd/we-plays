@@ -3,7 +3,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore }  from '../store/playerStore';
 import SpSongRow from './SpSongRow';
 import LanShareModal from './LanShareModal';
-import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, FileDown, Share2, CheckSquare, Square, ListChecks } from 'lucide-react';
+import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, FileDown, Share2, CheckSquare, Square } from 'lucide-react';
 
 export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChange }) {
   const { 

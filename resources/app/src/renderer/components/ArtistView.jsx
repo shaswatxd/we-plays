@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore } from '../store/playerStore';
-import { Music, Play, Shuffle, Users, ChevronRight } from 'lucide-react';
+import { Music, Play, Shuffle, Users } from 'lucide-react';
 
 function hslFromStr(str) {
   let hash = 0;

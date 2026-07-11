@@ -1,9 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, ListMusic } from 'lucide-react';
 
 export default function SpTopBar({ view, showPanel, onTogglePanel, onGlobalSearch, scrolled }) {
   const [q, setQ] = useState('');
   const timer = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   const fire = (val) => {
     if (val.trim().length >= 2) {
