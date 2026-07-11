@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { Play, Download, Plus, Trash2, Folder, MoreVertical, Music, Bookmark, Fingerprint } from 'lucide-react';
@@ -176,7 +177,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
       </div>
 
       {/* Context Menu */}
-      {showMenu && (
+      {showMenu && createPortal(
         <div
           ref={menuRef}
           className="sp-ctx-menu"
@@ -253,7 +254,8 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm */}

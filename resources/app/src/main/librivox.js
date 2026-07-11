@@ -27,25 +27,34 @@ function httpGetJson(pathAndQuery) {
         httpGetJson(url ? url.pathname + url.search : loc).then(resolve).catch(reject);
         return;
       }
-      if (res.statusCode !== 200) {
-        res.resume();
-        reject(new Error(`LibriVox API returned status ${res.statusCode}`));
-        return;
-      }
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
-        try {
-          const data = JSON.parse(body);
-          apiCache.set(pathAndQuery, { data, ts: Date.now() });
-          if (apiCache.size > 100) {
-            const firstKey = apiCache.keys().next().value;
-            apiCache.delete(firstKey);
+        // LibriVox's API returns HTTP 404/500 with a JSON {"error": "..."}
+        // body (instead of 200 + empty list) whenever a filtered search
+        // (e.g. title+author combos, or an unmatched genre) has zero
+        // results. Treat that shape as "no results" instead of a failure.
+        let parsed;
+        try { parsed = JSON.parse(body); } catch { parsed = null; }
+
+        if (res.statusCode !== 200) {
+          if (parsed && typeof parsed.error === 'string') {
+            resolve({ books: [] });
+            return;
           }
-          resolve(data);
-        } catch (e) {
-          reject(new Error('Failed to parse LibriVox response'));
+          reject(new Error(`LibriVox API returned status ${res.statusCode}`));
+          return;
         }
+        if (!parsed) {
+          reject(new Error('Failed to parse LibriVox response'));
+          return;
+        }
+        apiCache.set(pathAndQuery, { data: parsed, ts: Date.now() });
+        if (apiCache.size > 100) {
+          const firstKey = apiCache.keys().next().value;
+          apiCache.delete(firstKey);
+        }
+        resolve(parsed);
       });
     });
 
