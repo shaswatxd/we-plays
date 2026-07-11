@@ -25,6 +25,7 @@ import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
 import FingerprintModal from './components/FingerprintModal';
 import AudiobooksView from './components/audiobooks/AudiobooksView';
+import UpdateBanner from './components/UpdateBanner';
 import AudiobookPlayerBar from './components/audiobooks/AudiobookPlayerBar';
 import { useActivePlayerStore } from './store/activePlayerStore';
 import { useAudiobookPlayerStore } from './store/audiobookPlayerStore';
@@ -213,6 +214,7 @@ export default function App() {
 
   return (
     <div className="app-shell" onDragOver={handleDragOver} onDrop={handleDrop}>
+      <UpdateBanner />
       <div className="app-header-row">
         <SpTopBar
           view={view}
@@ -237,14 +239,20 @@ export default function App() {
         </div>
         {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} />}
       </div>
-      {activePlayer === 'audiobook' && audiobookCurrentBook
-        ? <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
-        : (
-          <SpPlayerBar
-            onToggleVis={() => setShowVis(!showVis)}
-            onToggleLyrics={() => setShowLyrics(l => !l)}
-          />
-        )}
+      {/* Both player bars stay mounted at all times so their Howl/audio logic
+          keeps running regardless of which one is visible — only one is
+          ever playing at once (mutual exclusion is handled in the stores),
+          but unmounting the inactive bar would kill its ability to react
+          to a new play command. */}
+      <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'block' : 'none' }}>
+        <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
+      </div>
+      <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'none' : 'block' }}>
+        <SpPlayerBar
+          onToggleVis={() => setShowVis(!showVis)}
+          onToggleLyrics={() => setShowLyrics(l => !l)}
+        />
+      </div>
       {showVis && <Visualizer onClose={() => setShowVis(false)} />}
       {showLyrics && <LyricsView onClose={() => setShowLyrics(false)} />}
       {dlSong && (

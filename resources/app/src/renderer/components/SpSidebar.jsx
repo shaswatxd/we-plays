@@ -33,7 +33,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
 
   const navItems = [
     { id: 'search',      label: 'Search',          Icon: Search    },
-    { id: 'recent',      label: 'Recently Played', Icon: History   },
     { id: 'audiobooks',  label: 'Audiobooks',      Icon: BookOpen  },
     { id: 'smart',       label: 'Smart Lists',     Icon: Sparkles  },
     { id: 'bookmarks',   label: 'Bookmarks',       Icon: Bookmark  },
@@ -45,20 +44,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
   return (
     <>
       <div className="sp-sidebar">
-        {/* Top nav */}
-        <div className="sp-nav-block">
-          {navItems.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              className={`sp-nav-item${view === id ? ' active' : ''}`}
-              onClick={() => onViewChange(id)}
-            >
-              <span className="sp-nav-icon"><Icon size={22} /></span>
-              {label}
-            </button>
-          ))}
-        </div>
-
         {/* Library block */}
         <div className="sp-library-block">
           <div className="sp-library-header">
@@ -111,6 +96,19 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
               </div>
             </div>
 
+            <div
+              className={`sp-playlist-item${view === 'recent' ? ' active' : ''}`}
+              onClick={() => onViewChange('recent')}
+            >
+              <div className="sp-playlist-thumb" style={{ background: 'linear-gradient(135deg,#f59e0b,#78350f)' }}>
+                <History size={18} color="white" />
+              </div>
+              <div className="sp-playlist-info">
+                <p className="sp-playlist-name">Recently Played</p>
+                <p className="sp-playlist-sub">Playlist</p>
+              </div>
+            </div>
+
             {playlists.map(pl => {
               const isActive = view === 'playlist' && playlistId === pl.id;
               return (
@@ -155,6 +153,20 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
               Settings
             </button>
           </div>
+        </div>
+
+        {/* Top nav */}
+        <div className="sp-nav-block">
+          {navItems.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`sp-nav-item${view === id ? ' active' : ''}`}
+              onClick={() => onViewChange(id)}
+            >
+              <span className="sp-nav-icon"><Icon size={22} /></span>
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 

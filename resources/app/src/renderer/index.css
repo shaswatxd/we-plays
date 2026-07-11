@@ -222,6 +222,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  flex-shrink: 0;
 }
 
 .sp-nav-item {
@@ -2807,6 +2808,79 @@ button:active:not(:disabled) {
 .sp-lyrics-gap {
   height: 20px;
 }
+
+.sp-update-banner {
+  position: fixed;
+  top: 44px;
+  right: 16px;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--sp-elevated);
+  border: 1px solid var(--sp-green);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  max-width: 340px;
+  animation: sp-update-slide-in var(--t-spring);
+}
+
+@keyframes sp-update-slide-in {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sp-update-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sp-green-dim);
+  color: var(--sp-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sp-update-banner-text { flex: 1; min-width: 0; }
+
+.sp-update-banner-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+.sp-update-banner-sub {
+  font-size: 11px;
+  color: var(--sp-text-dim);
+  margin-top: 2px;
+}
+
+.sp-update-banner-btn {
+  background: var(--sp-green);
+  border: none;
+  color: #000;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 7px 14px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sp-update-banner-btn:hover { background: var(--sp-green-hover); }
+
+.sp-update-banner-close {
+  background: none;
+  border: none;
+  color: var(--sp-text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.sp-update-banner-close:hover { color: var(--sp-text); }
 
 /* ════════════════════════════════════════════════════════════
    AUDIOBOOKS — LibriVox section

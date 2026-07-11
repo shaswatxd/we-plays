@@ -101,13 +101,15 @@ function buildQuery(params) {
 }
 
 async function searchAudiobooks({ title, author, genre, offset = 0, limit = 24 } = {}) {
+  // extended=1 is intentionally omitted here: it triples the payload (full
+  // descriptions + chapter sections for every result) for data list/search
+  // cards never render. Only the single-book detail fetch needs it.
   const query = buildQuery({
     title: title ? `^${title}` : undefined,
     author: author ? `^${author}` : undefined,
     genre: genre ? `^${genre}` : undefined,
     offset,
     limit,
-    extended: 1,
     coverart: 1,
     format: 'json'
   });
@@ -125,7 +127,7 @@ async function getAudiobookById(id) {
 }
 
 async function searchAuthors(name, limit = 40) {
-  const query = buildQuery({ author: `^${name}`, extended: 1, limit: 60, format: 'json' });
+  const query = buildQuery({ author: `^${name}`, coverart: 1, limit: 60, format: 'json' });
   const data = await httpGetJson(`/api/feed/audiobooks/?${query}`);
   const books = (data.books || []).map(normalizeBook).filter(Boolean);
   const seen = new Map();
