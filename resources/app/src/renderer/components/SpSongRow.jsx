@@ -49,7 +49,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
     if (x + 210 > vw) x = vw - 215;
     if (y + 320 > vh) y = vh - 325;
     setMenuPos({ x, y });
-    setShowMenu(v => !v);
+    setShowMenu(true);
   };
 
   const confirmDelete = async () => {
@@ -164,7 +164,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </>
           )}
           {!isSearchItem && (
-            <button className="sp-row-btn" style={{ opacity:1 }} onMouseDown={openMenu}>
+            <button className="sp-row-btn" style={{ opacity:1 }} onClick={openMenu}>
               <MoreVertical size={15} />
             </button>
           )}
@@ -241,7 +241,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
                   <Folder size={14}/> Show in Explorer
                 </button>
               )}
-              <button className="sp-ctx-item danger" onClick={() => { setShowMenu(false); setShowDel(true); }}>
+              <button className="sp-ctx-item danger" onClick={() => { setShowMenu(false); setShowDel(true); }} style={{ color: '#f15e6c' }}>
                 <Trash2 size={14}/> Delete from Library
               </button>
             </>
