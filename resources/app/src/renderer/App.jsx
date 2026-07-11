@@ -35,6 +35,7 @@ export default function App() {
   const [view,       setView]       = useState('search');
   const [playlistId, setPlaylistId] = useState(null);
   const [showPanel,  setShowPanel]  = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState('queue');
   const [showVis,    setShowVis]    = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [dlSong,     setDlSong]     = useState(null);
@@ -239,7 +240,7 @@ export default function App() {
             {renderView()}
           </div>
         </div>
-        {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} />}
+        {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} initialTab={rightPanelTab} />}
       </div>
       {/* Both player bars stay mounted at all times so their Howl/audio logic
           keeps running regardless of which one is visible — only one is
@@ -258,7 +259,7 @@ export default function App() {
       {showVis && <Visualizer onClose={() => setShowVis(false)} />}
       {showLyrics && <LyricsView onClose={() => setShowLyrics(false)} />}
       {dlSong && (
-        <DownloadModal song={dlSong} onClose={() => setDlSong(null)} />
+        <DownloadModal song={dlSong} onClose={() => setDlSong(null)} onStarted={() => { setRightPanelTab('downloads'); setShowPanel(true); }} />
       )}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
       {fpSong && (

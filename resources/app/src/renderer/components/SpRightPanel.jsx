@@ -12,8 +12,8 @@ function fmtDur(s) {
   return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 }
 
-export default function SpRightPanel({ onClose }) {
-  const [tab, setTab] = useState('queue');
+export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
+  const [tab, setTab] = useState(initialTab);
   const { queue, queueIndex, currentSong, playSong, removeFromQueue, clearQueue, reorderQueue, playHistory, clearPlayHistory } = usePlayerStore();
   const { downloads, clearCompleted, cancelDownload, removeDownload } = useDownloadStore();
   const [dragIdx, setDragIdx] = useState(null);
