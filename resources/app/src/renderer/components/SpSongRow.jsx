@@ -24,8 +24,8 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
     const close = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    setTimeout(() => document.addEventListener('click', close), 0);
+    return () => document.removeEventListener('click', close);
   }, [showMenu]);
 
   const play = (e) => {
@@ -160,7 +160,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </>
           )}
           {!isSearchItem && (
-            <button className="sp-row-btn" style={{ opacity:1 }} onClick={openMenu}>
+            <button className="sp-row-btn" style={{ opacity:1, position:'relative', zIndex:10 }} onMouseDown={e => { e.stopPropagation(); openMenu(e); }}>
               <MoreVertical size={15} />
             </button>
           )}
