@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLibraryStore } from './store/libraryStore';
 import { useDownloadStore } from './store/downloadStore';
 import { usePlayerStore } from './store/playerStore';
+import { useAudiobookStore } from './store/audiobookStore';
 
 import SpSidebar    from './components/SpSidebar';
 import SpPlayerBar  from './components/SpPlayerBar';
@@ -23,6 +24,10 @@ import AlbumView    from './components/AlbumView';
 import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
 import FingerprintModal from './components/FingerprintModal';
+import AudiobooksView from './components/audiobooks/AudiobooksView';
+import AudiobookPlayerBar from './components/audiobooks/AudiobookPlayerBar';
+import { useActivePlayerStore } from './store/activePlayerStore';
+import { useAudiobookPlayerStore } from './store/audiobookPlayerStore';
 
 export default function App() {
   const [view,       setView]       = useState('search');
@@ -39,6 +44,8 @@ export default function App() {
   const toastRef = React.useRef(null);
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
+  const activePlayer = useActivePlayerStore(s => s.active);
+  const audiobookCurrentBook = useAudiobookPlayerStore(s => s.currentBook);
 
   useEffect(() => {
     loadLibrary();
@@ -106,6 +113,22 @@ export default function App() {
     const cleanError = window.electronAPI.onDownloadError(d => {
       useDownloadStore.getState().errorDownload(d.id, d.error);
       window.showToast?.(`Download failed: ${d.error}`, 'error');
+    });
+    return () => { cleanProgress?.(); cleanComplete?.(); cleanError?.(); };
+  }, []);
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    const cleanProgress = window.electronAPI.onAudiobookDownloadProgress(d => {
+      useAudiobookStore.getState().updateDownloadProgress(d);
+    });
+    const cleanComplete = window.electronAPI.onAudiobookDownloadComplete(d => {
+      useAudiobookStore.getState().markDownloadStatus(d.bookId, d.chapterIndex, 'completed');
+      window.showToast?.(`Downloaded: ${d.title || 'Chapter'}`, 'success');
+    });
+    const cleanError = window.electronAPI.onAudiobookDownloadError(d => {
+      useAudiobookStore.getState().markDownloadStatus(d.bookId, d.chapterIndex, 'error');
+      window.showToast?.(`Audiobook download failed: ${d.message}`, 'error');
     });
     return () => { cleanProgress?.(); cleanComplete?.(); cleanError?.(); };
   }, []);
@@ -181,6 +204,7 @@ export default function App() {
       case 'artists':     return <ArtistView />;
       case 'albums':      return <AlbumView />;
       case 'stats':       return <StatsView />;
+      case 'audiobooks':  return <AudiobooksView />;
       default:            return <SearchView   onDownloadTrigger={setDlSong} />;
     }
   }, [view, playlistId, globalSearchQuery, openPlaylist]);
@@ -213,10 +237,14 @@ export default function App() {
         </div>
         {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} />}
       </div>
-      <SpPlayerBar
-        onToggleVis={() => setShowVis(!showVis)}
-        onToggleLyrics={() => setShowLyrics(l => !l)}
-      />
+      {activePlayer === 'audiobook' && audiobookCurrentBook
+        ? <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
+        : (
+          <SpPlayerBar
+            onToggleVis={() => setShowVis(!showVis)}
+            onToggleLyrics={() => setShowLyrics(l => !l)}
+          />
+        )}
       {showVis && <Visualizer onClose={() => setShowVis(false)} />}
       {showLyrics && <LyricsView onClose={() => setShowLyrics(false)} />}
       {dlSong && (

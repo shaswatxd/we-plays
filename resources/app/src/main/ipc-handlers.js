@@ -7,6 +7,8 @@ const os = require('os');
 const https = require('https');
 const { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getFfmpegPath, getFfmpegVersion, updateFfmpeg, getStreamUrl, getPlaylistInfo, getAudioFingerprint } = require('./downloader');
 const library = require('./library');
+const librivox = require('./librivox');
+const audiobookDownloader = require('./audiobookDownloader');
 
 let activeDownloads = new Map();
 let lanServer = null;
@@ -516,6 +518,105 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
     if (lanServer) { try { lanServer.close(); } catch(_) {} lanServer = null; }
     return true;
   });
+
+  // ── AUDIOBOOKS (LibriVox) ────────────────────────────────────────────
+
+  ipcMain.handle('audiobook-search', async (event, params) => {
+    try { return await librivox.searchAudiobooks(params); }
+    catch (err) { throw new Error(err.message); }
+  });
+
+  ipcMain.handle('audiobook-get-book', async (event, id) => {
+    try { return await librivox.getAudiobookById(id); }
+    catch (err) { throw new Error(err.message); }
+  });
+
+  ipcMain.handle('audiobook-search-authors', async (event, name) => {
+    try { return await librivox.searchAuthors(name); }
+    catch (err) { throw new Error(err.message); }
+  });
+
+  ipcMain.handle('audiobook-download-chapter', (event, options) => {
+    return new Promise((resolve) => {
+      audiobookDownloader.downloadChapter(
+        options,
+        (progress) => {
+          mainWindow.webContents.send('audiobook-download-progress', progress);
+          library.upsertAudiobookDownload({
+            bookId: progress.bookId, chapterIndex: progress.chapterIndex,
+            title: options.title, bookTitle: options.bookTitle, book: options.book,
+            filePath: audiobookDownloader.getChapterPath(progress.bookId, progress.chapterIndex),
+            totalBytes: progress.totalBytes, downloadedBytes: progress.downloadedBytes,
+            status: 'downloading'
+          });
+        },
+        (result) => {
+          library.upsertAudiobookDownload({
+            bookId: result.bookId, chapterIndex: result.chapterIndex,
+            title: result.title, bookTitle: result.bookTitle, book: options.book,
+            filePath: result.filePath, totalBytes: result.totalBytes,
+            downloadedBytes: result.totalBytes, status: 'completed'
+          });
+          mainWindow.webContents.send('audiobook-download-complete', result);
+          resolve({ success: true, ...result });
+        },
+        (error) => {
+          library.upsertAudiobookDownload({
+            bookId: error.bookId, chapterIndex: error.chapterIndex,
+            title: options.title, bookTitle: options.bookTitle,
+            filePath: '', totalBytes: 0, downloadedBytes: 0, status: 'error'
+          });
+          mainWindow.webContents.send('audiobook-download-error', error);
+          resolve({ success: false, ...error });
+        }
+      );
+    });
+  });
+
+  ipcMain.handle('audiobook-pause-download', (event, bookId, chapterIndex) => {
+    const ok = audiobookDownloader.pauseDownload(bookId, chapterIndex);
+    library.upsertAudiobookDownload({ bookId, chapterIndex, status: 'paused' });
+    return ok;
+  });
+
+  ipcMain.handle('audiobook-cancel-download', (event, bookId, chapterIndex) => {
+    audiobookDownloader.cancelDownload(bookId, chapterIndex);
+    library.removeAudiobookDownload(bookId, chapterIndex);
+    return true;
+  });
+
+  ipcMain.handle('audiobook-delete-download', (event, bookId, chapterIndex) => {
+    audiobookDownloader.deleteDownload(bookId, chapterIndex);
+    library.removeAudiobookDownload(bookId, chapterIndex);
+    return true;
+  });
+
+  ipcMain.handle('audiobook-get-downloads', () => library.getAudiobookDownloads());
+
+  ipcMain.handle('audiobook-is-downloaded', (event, bookId, chapterIndex) =>
+    audiobookDownloader.isDownloaded(bookId, chapterIndex));
+
+  ipcMain.handle('audiobook-get-chapter-path', (event, bookId, chapterIndex) =>
+    audiobookDownloader.getChapterPath(bookId, chapterIndex));
+
+  ipcMain.handle('audiobook-get-favorites', () => library.getAudiobookFavorites());
+  ipcMain.handle('audiobook-is-favorite', (event, bookId) => library.isAudiobookFavorite(bookId));
+  ipcMain.handle('audiobook-toggle-favorite', (event, book) => library.toggleAudiobookFavorite(book));
+
+  ipcMain.handle('audiobook-get-progress', (event, bookId) => library.getAudiobookProgress(bookId));
+  ipcMain.handle('audiobook-get-all-progress', () => library.getAllAudiobookProgress());
+  ipcMain.handle('audiobook-save-progress', (event, bookId, chapterIndex, position, duration, book) =>
+    library.saveAudiobookProgress(bookId, chapterIndex, position, duration, book));
+  ipcMain.handle('audiobook-remove-progress', (event, bookId) => library.removeAudiobookProgress(bookId));
+
+  ipcMain.handle('audiobook-get-bookmarks', (event, bookId) => library.getAudiobookBookmarks(bookId));
+  ipcMain.handle('audiobook-save-bookmark', (event, bookId, chapterIndex, position, label) =>
+    library.saveAudiobookBookmark(bookId, chapterIndex, position, label));
+  ipcMain.handle('audiobook-delete-bookmark', (event, id) => library.deleteAudiobookBookmark(id));
+
+  ipcMain.handle('audiobook-add-history', (event, bookId, book) => library.addAudiobookHistory(bookId, book));
+  ipcMain.handle('audiobook-get-history', () => library.getAudiobookHistory());
+  ipcMain.handle('audiobook-clear-history', () => { library.clearAudiobookHistory(); return true; });
 
   // ── AUTO-UPDATER HANDLERS ──────────────────────────────────────────────
 

@@ -88,11 +88,69 @@ async function initDatabase() {
     )
   `);
 
+  // ── Audiobooks (LibriVox) ──────────────────────────────────────────────
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audiobook_favorites (
+      book_id     TEXT PRIMARY KEY,
+      data        TEXT NOT NULL,
+      created_at  TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audiobook_progress (
+      book_id        TEXT PRIMARY KEY,
+      chapter_index  INTEGER DEFAULT 0,
+      position       REAL DEFAULT 0,
+      duration       REAL DEFAULT 0,
+      data           TEXT,
+      updated_at     TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audiobook_bookmarks (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      book_id        TEXT NOT NULL,
+      chapter_index  INTEGER NOT NULL,
+      position       REAL NOT NULL,
+      label          TEXT DEFAULT '',
+      created_at     TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audiobook_history (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      book_id     TEXT NOT NULL,
+      data        TEXT NOT NULL,
+      played_at   TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audiobook_downloads (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      book_id           TEXT NOT NULL,
+      chapter_index     INTEGER NOT NULL,
+      title             TEXT,
+      book_title        TEXT,
+      book_data         TEXT,
+      file_path         TEXT,
+      total_bytes       INTEGER DEFAULT 0,
+      downloaded_bytes  INTEGER DEFAULT 0,
+      status            TEXT DEFAULT 'queued',
+      updated_at        TEXT DEFAULT (datetime('now')),
+      UNIQUE(book_id, chapter_index)
+    )
+  `);
+
 
   // Schema migrations for existing databases
   const migrations = [
     "ALTER TABLE songs ADD COLUMN replay_gain REAL DEFAULT 0",
     "ALTER TABLE songs ADD COLUMN rating INTEGER DEFAULT 0",
+    "ALTER TABLE audiobook_downloads ADD COLUMN book_data TEXT",
   ];
   for (const m of migrations) {
     try { db.run(m); } catch(_) { /* column already exists */ }
@@ -687,6 +745,105 @@ function getListeningStats() {
 }
 
 
+// ── Audiobooks (LibriVox) ───────────────────────────────────────────────
+
+function getAudiobookFavorites() {
+  return queryAll('SELECT * FROM audiobook_favorites ORDER BY created_at DESC')
+    .map(r => ({ ...JSON.parse(r.data), _favoritedAt: r.created_at }));
+}
+
+function isAudiobookFavorite(bookId) {
+  return !!queryGet('SELECT book_id FROM audiobook_favorites WHERE book_id = ?', [String(bookId)]);
+}
+
+function toggleAudiobookFavorite(book) {
+  const bookId = String(book.id);
+  const existing = queryGet('SELECT book_id FROM audiobook_favorites WHERE book_id = ?', [bookId]);
+  if (existing) {
+    runSql('DELETE FROM audiobook_favorites WHERE book_id = ?', [bookId]);
+    return false;
+  }
+  runSql('INSERT OR REPLACE INTO audiobook_favorites (book_id, data) VALUES (?, ?)', [bookId, JSON.stringify(book)]);
+  return true;
+}
+
+function getAudiobookProgress(bookId) {
+  return queryGet('SELECT * FROM audiobook_progress WHERE book_id = ?', [String(bookId)]);
+}
+
+function getAllAudiobookProgress() {
+  return queryAll('SELECT * FROM audiobook_progress ORDER BY updated_at DESC');
+}
+
+function saveAudiobookProgress(bookId, chapterIndex, position, duration, book) {
+  const id = String(bookId);
+  const existing = queryGet('SELECT book_id FROM audiobook_progress WHERE book_id = ?', [id]);
+  const data = book ? JSON.stringify(book) : (existing ? undefined : null);
+  if (existing) {
+    if (book) {
+      runSql('UPDATE audiobook_progress SET chapter_index = ?, position = ?, duration = ?, data = ?, updated_at = datetime(\'now\') WHERE book_id = ?', [chapterIndex, position, duration, data, id]);
+    } else {
+      runSql('UPDATE audiobook_progress SET chapter_index = ?, position = ?, duration = ?, updated_at = datetime(\'now\') WHERE book_id = ?', [chapterIndex, position, duration, id]);
+    }
+  } else {
+    runSql('INSERT INTO audiobook_progress (book_id, chapter_index, position, duration, data) VALUES (?, ?, ?, ?, ?)', [id, chapterIndex, position, duration, data || null]);
+  }
+}
+
+function removeAudiobookProgress(bookId) {
+  runSql('DELETE FROM audiobook_progress WHERE book_id = ?', [String(bookId)]);
+}
+
+function getAudiobookBookmarks(bookId) {
+  return queryAll('SELECT * FROM audiobook_bookmarks WHERE book_id = ? ORDER BY chapter_index ASC, position ASC', [String(bookId)]);
+}
+
+function saveAudiobookBookmark(bookId, chapterIndex, position, label) {
+  return runSql('INSERT INTO audiobook_bookmarks (book_id, chapter_index, position, label) VALUES (?, ?, ?, ?)', [String(bookId), chapterIndex, position, label || '']);
+}
+
+function deleteAudiobookBookmark(id) {
+  runSql('DELETE FROM audiobook_bookmarks WHERE id = ?', [id]);
+}
+
+function addAudiobookHistory(bookId, book) {
+  runSql('DELETE FROM audiobook_history WHERE book_id = ?', [String(bookId)]);
+  runSql('INSERT INTO audiobook_history (book_id, data) VALUES (?, ?)', [String(bookId), JSON.stringify(book)]);
+}
+
+function getAudiobookHistory() {
+  return queryAll('SELECT * FROM audiobook_history ORDER BY played_at DESC LIMIT 50')
+    .map(r => ({ ...JSON.parse(r.data), _playedAt: r.played_at }));
+}
+
+function clearAudiobookHistory() {
+  runSql('DELETE FROM audiobook_history');
+}
+
+function getAudiobookDownloads() {
+  return queryAll('SELECT * FROM audiobook_downloads ORDER BY updated_at DESC');
+}
+
+function upsertAudiobookDownload(entry) {
+  const existing = queryGet('SELECT id, book_data FROM audiobook_downloads WHERE book_id = ? AND chapter_index = ?', [String(entry.bookId), entry.chapterIndex]);
+  const bookData = entry.book ? JSON.stringify(entry.book) : (existing?.book_data ?? null);
+  if (existing) {
+    runSql(
+      `UPDATE audiobook_downloads SET title = ?, book_title = ?, book_data = ?, file_path = ?, total_bytes = ?, downloaded_bytes = ?, status = ?, updated_at = datetime('now') WHERE id = ?`,
+      [entry.title || '', entry.bookTitle || '', bookData, entry.filePath || '', entry.totalBytes || 0, entry.downloadedBytes || 0, entry.status || 'queued', existing.id]
+    );
+    return existing.id;
+  }
+  return runSql(
+    'INSERT INTO audiobook_downloads (book_id, chapter_index, title, book_title, book_data, file_path, total_bytes, downloaded_bytes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [String(entry.bookId), entry.chapterIndex, entry.title || '', entry.bookTitle || '', bookData, entry.filePath || '', entry.totalBytes || 0, entry.downloadedBytes || 0, entry.status || 'queued']
+  );
+}
+
+function removeAudiobookDownload(bookId, chapterIndex) {
+  runSql('DELETE FROM audiobook_downloads WHERE book_id = ? AND chapter_index = ?', [String(bookId), chapterIndex]);
+}
+
 module.exports = {
   initDatabase, getAllSongs, getSongById, addSong, addLocalSong, removeSong,
   toggleFavorite, updatePlayCount, updateSongMetadata, updateSongGain, updateSongRating, getFavorites,
@@ -698,5 +855,11 @@ module.exports = {
   getBookmarks, saveBookmark, deleteBookmark, getAllBookmarks,
   exportLibrary, importLibrary,
   findOrphanedSongs, removeOrphanedSongs, findDuplicatePlaylists, removeDuplicatePlaylists,
-  getListeningStats
+  getListeningStats,
+  // Audiobooks
+  getAudiobookFavorites, isAudiobookFavorite, toggleAudiobookFavorite,
+  getAudiobookProgress, getAllAudiobookProgress, saveAudiobookProgress, removeAudiobookProgress,
+  getAudiobookBookmarks, saveAudiobookBookmark, deleteAudiobookBookmark,
+  addAudiobookHistory, getAudiobookHistory, clearAudiobookHistory,
+  getAudiobookDownloads, upsertAudiobookDownload, removeAudiobookDownload
 };
