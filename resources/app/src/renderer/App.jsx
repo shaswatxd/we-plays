@@ -14,7 +14,6 @@ import SearchView   from './components/SearchView';
 import PlaylistView from './components/PlaylistView';
 import SettingsView from './components/SettingsView';
 import DownloadModal from './components/DownloadModal';
-import Visualizer   from './components/Visualizer';
 import GlobalSearchView from './components/GlobalSearchView';
 import ShortcutsModal from './components/ShortcutsModal';
 import StatsView    from './components/StatsView';
@@ -31,7 +30,6 @@ export default function App() {
   const [playlistId, setPlaylistId] = useState(null);
   const [showPanel,  setShowPanel]  = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('queue');
-  const [showVis,    setShowVis]    = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [dlSong,     setDlSong]     = useState(null);
   const [toast,      setToast]      = useState(null);
@@ -249,11 +247,9 @@ export default function App() {
       </div>
       <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'none' : 'block' }}>
         <SpPlayerBar
-          onToggleVis={() => setShowVis(!showVis)}
           onToggleLyrics={() => setShowLyrics(l => !l)}
         />
       </div>
-      {showVis && <Visualizer onClose={() => setShowVis(false)} />}
       {showLyrics && <LyricsView onClose={() => setShowLyrics(false)} />}
       {dlSong && (
         <DownloadModal song={dlSong} onClose={() => setDlSong(null)} onStarted={() => { setRightPanelTab('downloads'); setShowPanel(true); }} />

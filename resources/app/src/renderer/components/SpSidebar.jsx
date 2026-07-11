@@ -136,7 +136,7 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
               className={`sp-nav-item${view === id ? ' active' : ''}`}
               onClick={() => onViewChange(id)}
             >
-              <span className="sp-nav-icon"><Icon size={18} /></span>
+              <span className="sp-nav-icon"><Icon size={17} /></span>
               {label}
             </button>
           ))}
@@ -148,7 +148,7 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
             className={`sp-nav-item${view === 'settings' ? ' active' : ''}`}
             onClick={() => onViewChange('settings')}
           >
-            <span className="sp-nav-icon"><Settings size={22} /></span>
+            <span className="sp-nav-icon"><Settings size={17} /></span>
             Settings
           </button>
         </div>

@@ -235,7 +235,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 12px;
+  padding: 9px 12px;
   border-radius: var(--r-md);
   border: none;
   background: transparent;
@@ -247,6 +247,27 @@ textarea {
   text-align: left;
   width: 100%;
   position: relative;
+}
+
+.sp-nav-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  transition: background var(--t-fast);
+}
+
+.sp-nav-item:hover .sp-nav-icon {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sp-nav-item.active .sp-nav-icon {
+  background: rgba(29, 185, 84, 0.15);
 }
 
 .sp-nav-item:hover {
@@ -1737,22 +1758,6 @@ kbd {
 }
 
 /* ══════════════════════════════════════════
-   VISUALIZER
-   ══════════════════════════════════════════ */
-.sp-visualizer {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 8, 8, 0.94);
-  backdrop-filter: blur(32px);
-  z-index: 10005;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-
-/* ══════════════════════════════════════════
    EQ bars (playing indicator)
    ══════════════════════════════════════════ */
 .eq-bars {
@@ -2132,33 +2137,6 @@ button:active:not(:disabled) {
   border-color: var(--sp-text);
   color: var(--sp-text);
   background: rgba(255, 255, 255, 0.06);
-}
-
-/* ══════════════════════════════════════════
-   VISUALIZER MODE BUTTONS
-   ══════════════════════════════════════════ */
-.sp-vis-mode {
-  padding: 6px 14px;
-  border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--sp-text-sec);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: capitalize;
-  transition: all 0.15s;
-}
-
-.sp-vis-mode:hover {
-  border-color: var(--sp-text);
-  color: var(--sp-text);
-}
-
-.sp-vis-mode.active {
-  border-color: var(--sp-green);
-  background: rgba(29, 185, 84, 0.2);
-  color: var(--sp-green);
 }
 
 /* ══════════════════════════════════════════

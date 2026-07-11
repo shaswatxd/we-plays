@@ -6,12 +6,12 @@ import { useActivePlayerStore } from '../store/activePlayerStore';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Volume2, VolumeX,
-  Maximize2, Music, Mic2
+  Music, Mic2
 } from 'lucide-react';
 import { Howl } from 'howler';
 import SpotifyHeart from './SpotifyHeart';
 
-export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
+export default function SpPlayerBar({ onToggleLyrics }) {
   const {
     currentSong, isPlaying, volume, isMuted,
     progress, duration, isShuffled, repeatMode, gaplessEnabled,
@@ -344,14 +344,14 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
       <div className="sp-player-left">
         {currentSong ? (
           <>
-            <div className="sp-now-thumb" onClick={onToggleVis}>
+            <div className="sp-now-thumb">
               {currentSong.thumbnail
                 ? <img src={currentSong.thumbnail} alt="" />
                 : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'#6a6a6a' }}><Music size={20}/></div>
               }
             </div>
             <div className="sp-now-meta">
-              <div className="sp-now-title" onClick={onToggleVis}>{currentSong.title}</div>
+              <div className="sp-now-title">{currentSong.title}</div>
               <div className="sp-now-artist">{currentSong.artist || 'Unknown Artist'}</div>
             </div>
             <button
@@ -443,13 +443,6 @@ export default function SpPlayerBar({ onToggleVis, onToggleLyrics }) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 12h4l3-9 4 18 3-9h4"/>
           </svg>
-        </button>
-        <button
-          className="sp-ctrl-btn"
-          onClick={onToggleVis}
-          title="Visualizer"
-        >
-          <Maximize2 size={16} />
         </button>
         <button className="sp-ctrl-btn" onClick={toggleMute}>
           {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
