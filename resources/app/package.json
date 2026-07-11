@@ -1,102 +1,102 @@
 {
-    "name":  "we-plays",
-    "version":  "2.0.38",
-    "main":  "src/main/index.js",
-    "description":  "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
-    "author":  "SHASWATTTT",
-    "license":  "MIT",
-    "scripts":  {
-                    "dev":  "vite",
-                    "build":  "vite build",
-                    "pack":  "npm run build \u0026\u0026 electron-builder --dir",
-                    "dist":  "npm run build \u0026\u0026 electron-builder",
-                    "push":  "powershell -ExecutionPolicy Bypass -File \"..\\..\\push.ps1\""
-                },
-    "dependencies":  {
-                         "electron-store":  "^8.1.0",
-                         "ffmpeg-static":  "^5.2.0",
-                         "howler":  "^2.2.4",
-                         "lucide-react":  "^1.18.0",
-                         "node-id3":  "^0.2.9",
-                         "react":  "^19.2.7",
-                         "react-dom":  "^19.2.7",
-                         "sql.js":  "^1.10.3",
-                         "zustand":  "^4.5.0"
-                     },
-    "allowScripts":  {
-                         "electron":  true,
-                         "esbuild":  true,
-                         "ffmpeg-static":  true
-                     },
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/shaswatxd/we-plays.git"
-                   },
-    "build":  {
-                  "appId":  "com.weplays.app",
-                  "productName":  "We Plays",
-                  "compression":  "maximum",
-                  "publish":  null,
-                  "directories":  {
-                                      "output":  "../../dist_installer"
-                                  },
-                  "files":  [
-                                "src/**/*",
-                                "dist/**/*",
-                                "index.html",
-                                "package.json",
-                                "assets/**/*",
-                                "!node_modules/.cache/**",
-                                "!**/*.map",
-                                "!**/*.md",
-                                "!**/*.ts",
-                                "!**/*.d.ts",
-                                "!**/test/**",
-                                "!**/tests/**",
-                                "!**/__tests__/**",
-                                "!**/coverage/**",
-                                "!**/.github/**",
-                                "!**/CHANGELOG*",
-                                "!**/LICENSE*",
-                                "!**/README*"
-                            ],
-                  "asarUnpack":  [
-                                     "**/node_modules/ffmpeg-static/**",
-                                     "**/node_modules/sql.js/**"
-                                 ],
-                  "extraResources":  [
-                                         {
-                                             "from":  "assets/binaries/yt-dlp.exe",
-                                             "to":  "binaries/yt-dlp.exe"
-                                         }
-                                     ],
-                  "win":  {
-                              "icon":  "assets/icons/icon.png",
-                              "target":  [
-                                             {
-                                                 "target":  "nsis",
-                                                 "arch":  [
-                                                              "x64"
-                                                          ]
-                                             }
-                                         ],
-                              "artifactName":  "WePlays-${version}-Setup.${ext}"
-                          },
-                  "nsis":  {
-                               "oneClick":  false,
-                               "perMachine":  false,
-                               "allowToChangeInstallationDirectory":  true,
-                               "createDesktopShortcut":  true,
-                               "createStartMenuShortcut":  true,
-                               "shortcutName":  "We Plays",
-                               "deleteAppDataOnUninstall":  false,
-                               "include":  "build/installer.nsh"
-                           }
-              },
-    "devDependencies":  {
-                            "@vitejs/plugin-react":  "^6.0.2",
-                            "electron":  "^42.4.0",
-                            "electron-builder":  "^26.0.12",
-                            "vite":  "^8.0.16"
-                        }
+  "name": "we-plays",
+  "version": "2.0.39",
+  "main": "src/main/index.js",
+  "description": "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
+  "author": "SHASWATTTT",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "push": "powershell -ExecutionPolicy Bypass -File \"..\\..\\push.ps1\""
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "ffmpeg-static": "^5.2.0",
+    "howler": "^2.2.4",
+    "lucide-react": "^1.18.0",
+    "node-id3": "^0.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sql.js": "^1.10.3",
+    "zustand": "^4.5.0"
+  },
+  "allowScripts": {
+    "electron": true,
+    "esbuild": true,
+    "ffmpeg-static": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaswatxd/we-plays.git"
+  },
+  "build": {
+    "appId": "com.weplays.app",
+    "productName": "We Plays",
+    "compression": "maximum",
+    "publish": null,
+    "directories": {
+      "output": "../../dist_installer"
+    },
+    "files": [
+      "src/**/*",
+      "dist/**/*",
+      "index.html",
+      "package.json",
+      "assets/**/*",
+      "!node_modules/.cache/**",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/*.ts",
+      "!**/*.d.ts",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/__tests__/**",
+      "!**/coverage/**",
+      "!**/.github/**",
+      "!**/CHANGELOG*",
+      "!**/LICENSE*",
+      "!**/README*"
+    ],
+    "asarUnpack": [
+      "**/node_modules/ffmpeg-static/**",
+      "**/node_modules/sql.js/**"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/binaries/yt-dlp.exe",
+        "to": "binaries/yt-dlp.exe"
+      }
+    ],
+    "win": {
+      "icon": "assets/icons/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "WePlays-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "We Plays",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    }
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.0.12",
+    "vite": "^8.0.16"
+  }
 }
