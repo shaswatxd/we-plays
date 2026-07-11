@@ -38,14 +38,15 @@ export default function DownloadModal({ song, onClose }) {
 
   const start = async () => {
     if (!folder) { window.showToast?.('Please select a download folder', 'error'); return; }
+    const songId = song.id || `dl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    setDownloadId(songId);
+    setStatus('downloading');
     setLoading(true);
     try {
-      const result = await startDownload(song, {
+      await startDownload(song, {
         format, quality, outputPath: folder, embedThumbnail: embedThumb, addMetadata: addMeta,
         addToPlaylistId: addToPl ? Number(addToPl) : null
-      });
-      setDownloadId(result.id);
-      setStatus('downloading');
+      }, songId);
     } catch (e) {
       window.showToast?.(`Failed: ${e.message}`, 'error');
       setStatus('error');
@@ -59,16 +60,12 @@ export default function DownloadModal({ song, onClose }) {
 
   const fmtSpeed = (speed) => {
     if (!speed) return '';
-    if (speed >= 1048576) return `${(speed / 1048576).toFixed(1)} MB/s`;
-    if (speed >= 1024) return `${(speed / 1024).toFixed(1)} KB/s`;
-    return `${speed} B/s`;
+    return speed;
   };
 
   const fmtEta = (eta) => {
-    if (!eta || eta <= 0) return '';
-    if (eta >= 3600) return `${Math.floor(eta / 3600)}h ${Math.floor((eta % 3600) / 60)}m`;
-    if (eta >= 60) return `${Math.floor(eta / 60)}m ${Math.floor(eta % 60)}s`;
-    return `${Math.floor(eta)}s`;
+    if (!eta) return '';
+    return eta;
   };
 
   const progress = downloadData?.progress || 0;

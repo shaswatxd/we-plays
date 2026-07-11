@@ -6,8 +6,8 @@ export const useDownloadStore = create((set, get) => ({
   downloads: [],
   queue: [],
 
-  startDownload: async (song, config) => {
-    const songId = song.id || `dl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  startDownload: async (song, config, externalId) => {
+    const songId = externalId || song.id || `dl_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     
     const activeCount = get().downloads.filter(d => d.status === 'downloading').length;
     
