@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
 import { Play, Download, Plus, Trash2, Folder, MoreVertical, Music, Bookmark, Fingerprint } from 'lucide-react';
@@ -13,6 +13,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
   const [bookmarkLabel, setBookmarkLabel] = useState('');
   const menuRef = useRef(null);
+  const justOpened = useRef(false);
 
   const isActive = currentSong && (
     (song.yt_id && currentSong.yt_id === song.yt_id) ||
@@ -21,15 +22,22 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
 
   useEffect(() => {
     if (!showMenu) return;
+    justOpened.current = true;
+    const timer = setTimeout(() => { justOpened.current = false; }, 50);
     const close = (e) => {
+      if (justOpened.current) return;
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
     };
-    setTimeout(() => document.addEventListener('click', close), 0);
-    return () => document.removeEventListener('click', close);
+    document.addEventListener('mousedown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      clearTimeout(timer);
+    };
   }, [showMenu]);
 
   const play = (e) => {
     e?.stopPropagation();
+    if (showMenu) return;
     if (onClick) {
       onClick();
     } else {
@@ -160,7 +168,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </>
           )}
           {!isSearchItem && (
-            <button className="sp-row-btn" style={{ opacity:1, position:'relative', zIndex:10 }} onMouseDown={e => { e.stopPropagation(); openMenu(e); }}>
+            <button className="sp-row-btn" style={{ opacity:1, position:'relative', zIndex:10 }} onClick={openMenu}>
               <MoreVertical size={15} />
             </button>
           )}
@@ -175,12 +183,13 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
           style={{ left: menuPos.x, top: menuPos.y }}
         >
           {!isSearchItem && (
-            <button className="sp-ctx-item" onClick={e => { play(e); setShowMenu(false); }}>
+            <button className="sp-ctx-item" onClick={e => { e.stopPropagation(); play(e); setShowMenu(false); }}>
               <Play size={14}/> Play Now
             </button>
           )}
           {!isSearchItem && (
-            <button className="sp-ctx-item" onClick={() => {
+            <button className="sp-ctx-item" onClick={e => {
+              e.stopPropagation();
               addToQueue(song);
               setShowMenu(false);
               window.showToast?.('Added to queue', 'success');
@@ -189,7 +198,8 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </button>
           )}
           {!isSearchItem && song.id && (
-            <button className="sp-ctx-item" onClick={() => {
+            <button className="sp-ctx-item" onClick={e => {
+              e.stopPropagation();
               setShowMenu(false);
               setShowBookmarkModal(true);
             }}>
@@ -197,7 +207,8 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             </button>
           )}
           {!isSearchItem && song.file_path && (
-            <button className="sp-ctx-item" onClick={() => {
+            <button className="sp-ctx-item" onClick={e => {
+              e.stopPropagation();
               setShowMenu(false);
               window.showFingerprintModal?.(song);
             }}>
@@ -206,7 +217,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
           )}
 
           {isSearchItem && (
-            <button className="sp-ctx-item" onClick={() => { onDownloadTrigger?.(song); setShowMenu(false); }}>
+            <button className="sp-ctx-item" onClick={e => { e.stopPropagation(); onDownloadTrigger?.(song); setShowMenu(false); }}>
               <Download size={16} color="#1db954"/> Download
             </button>
           )}
@@ -217,7 +228,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
               <div className="sp-ctx-label">Add to Playlist</div>
               {playlists.map(pl => (
                 <button key={pl.id} className="sp-ctx-item" style={{ paddingLeft:24 }}
-                  onClick={() => { addToPlaylist(pl.id, song.id); setShowMenu(false); window.showToast?.(`Added to ${pl.name}`,'success'); }}>
+                  onClick={e => { e.stopPropagation(); addToPlaylist(pl.id, song.id); setShowMenu(false); window.showToast?.(`Added to ${pl.name}`,'success'); }}>
                   {pl.name}
                 </button>
               ))}
@@ -228,16 +239,16 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
             <>
               <div className="sp-ctx-sep"/>
               {onRemovePlaylistSong && (
-                <button className="sp-ctx-item" onClick={() => { onRemovePlaylistSong(song.id); setShowMenu(false); }}>
+                <button className="sp-ctx-item" onClick={e => { e.stopPropagation(); onRemovePlaylistSong(song.id); setShowMenu(false); }}>
                   <Trash2 size={14}/> Remove from Playlist
                 </button>
               )}
               {song.file_path && (
-                <button className="sp-ctx-item" onClick={() => { window.electronAPI?.showFileInExplorer(song.file_path); setShowMenu(false); }}>
+                <button className="sp-ctx-item" onClick={e => { e.stopPropagation(); window.electronAPI?.showFileInExplorer(song.file_path); setShowMenu(false); }}>
                   <Folder size={14}/> Show in Explorer
                 </button>
               )}
-              <button className="sp-ctx-item danger" onClick={() => { setShowMenu(false); setShowDel(true); }} style={{ color: '#f15e6c' }}>
+              <button className="sp-ctx-item danger" onClick={e => { e.stopPropagation(); setShowMenu(false); setShowDel(true); }} style={{ color: '#f15e6c' }}>
                 <Trash2 size={14}/> Delete from Library
               </button>
             </>
