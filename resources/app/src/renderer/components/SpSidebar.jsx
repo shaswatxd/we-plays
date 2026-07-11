@@ -32,7 +32,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
   };
 
   const navItems = [
-    { id: 'search',      label: 'Search',          Icon: Search    },
     { id: 'audiobooks',  label: 'Audiobooks',      Icon: BookOpen  },
     { id: 'smart',       label: 'Smart Lists',     Icon: Sparkles  },
     { id: 'bookmarks',   label: 'Bookmarks',       Icon: Bookmark  },
@@ -44,6 +43,17 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
   return (
     <>
       <div className="sp-sidebar">
+        {/* Search at top */}
+        <div className="sp-nav-block" style={{ paddingBottom: 0 }}>
+          <button
+            className={`sp-nav-item${view === 'search' ? ' active' : ''}`}
+            onClick={() => onViewChange('search')}
+          >
+            <span className="sp-nav-icon"><Search size={22} /></span>
+            Search
+          </button>
+        </div>
+
         {/* Library block */}
         <div className="sp-library-block">
           <div className="sp-library-header">
@@ -142,21 +152,10 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
             )}
           </div>
 
-          {/* Settings at bottom */}
-          <div className="sp-sidebar-footer">
-            <button
-              className={`sp-nav-item${view === 'settings' ? ' active' : ''}`}
-              style={{ width: '100%' }}
-              onClick={() => onViewChange('settings')}
-            >
-              <span className="sp-nav-icon"><Settings size={20} /></span>
-              Settings
-            </button>
-          </div>
         </div>
 
         {/* Top nav */}
-        <div className="sp-nav-block">
+        <div className="sp-nav-block scrollable">
           {navItems.map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -167,6 +166,17 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
               {label}
             </button>
           ))}
+        </div>
+
+        {/* Settings at bottom */}
+        <div className="sp-nav-block" style={{ paddingTop: 0 }}>
+          <button
+            className={`sp-nav-item${view === 'settings' ? ' active' : ''}`}
+            onClick={() => onViewChange('settings')}
+          >
+            <span className="sp-nav-icon"><Settings size={22} /></span>
+            Settings
+          </button>
         </div>
       </div>
 

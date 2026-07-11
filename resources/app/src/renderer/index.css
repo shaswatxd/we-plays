@@ -223,6 +223,12 @@ textarea {
   flex-direction: column;
   gap: 1px;
   flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sp-nav-block.scrollable {
+  flex: 1;
+  min-height: 0;
 }
 
 .sp-nav-item {
