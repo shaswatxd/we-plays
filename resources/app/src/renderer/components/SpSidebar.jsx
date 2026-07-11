@@ -43,17 +43,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
   return (
     <>
       <div className="sp-sidebar">
-        {/* Search at top */}
-        <div className="sp-nav-block" style={{ paddingBottom: 0 }}>
-          <button
-            className={`sp-nav-item${view === 'search' ? ' active' : ''}`}
-            onClick={() => onViewChange('search')}
-          >
-            <span className="sp-nav-icon"><Search size={22} /></span>
-            Search
-          </button>
-        </div>
-
         {/* Library block */}
         <div className="sp-library-block">
           <div className="sp-library-header">
