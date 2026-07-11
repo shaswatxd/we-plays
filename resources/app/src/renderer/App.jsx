@@ -25,6 +25,7 @@ import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
 import FingerprintModal from './components/FingerprintModal';
 import AudiobooksView from './components/audiobooks/AudiobooksView';
+import YouTubeSearchView from './components/YouTubeSearchView';
 import UpdateBanner from './components/UpdateBanner';
 import AudiobookPlayerBar from './components/audiobooks/AudiobookPlayerBar';
 import { useActivePlayerStore } from './store/activePlayerStore';
@@ -206,6 +207,7 @@ export default function App() {
       case 'albums':      return <AlbumView />;
       case 'stats':       return <StatsView />;
       case 'audiobooks':  return <AudiobooksView />;
+      case 'ytsearch':    return <YouTubeSearchView onDownloadTrigger={setDlSong} />;
       default:            return <SearchView   onDownloadTrigger={setDlSong} />;
     }
   }, [view, playlistId, globalSearchQuery, openPlaylist]);
