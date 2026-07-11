@@ -2,16 +2,29 @@ const { ipcMain, dialog, shell, app } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const http = require('http');
-const os = require('os');
 const https = require('https');
-const { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getFfmpegPath, getFfmpegVersion, updateFfmpeg, getStreamUrl, getPlaylistInfo, getAudioFingerprint } = require('./downloader');
+const { searchYouTubeMusic, searchYouTubeMusicPaginated, downloadSong, cancelDownload, updateYtdlp, getYtdlpVersion, getFfmpegPath, getFfmpegVersion, updateFfmpeg, getStreamUrl, getPlaylistInfo } = require('./downloader');
 const library = require('./library');
 const librivox = require('./librivox');
 const audiobookDownloader = require('./audiobookDownloader');
 
 let activeDownloads = new Map();
-let lanServer = null;
+
+// music-metadata is ESM-only; load it lazily via dynamic import from this CJS file.
+async function readAudioTags(filePath) {
+  try {
+    const mm = await import('music-metadata');
+    const { format, common } = await mm.parseFile(filePath, { duration: true, skipCovers: true });
+    return {
+      duration: Math.round(format.duration || 0),
+      title: common.title || null,
+      artist: common.artist || null,
+      album: common.album || null
+    };
+  } catch {
+    return { duration: 0, title: null, artist: null, album: null };
+  }
+}
 
 
 function setupIpcHandlers(mainWindow, store, forceQuit) {
@@ -311,12 +324,14 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
       const ext = path.extname(filePath).slice(1).toLowerCase();
       const name = path.basename(filePath, path.extname(filePath));
       const localId = 'local_' + crypto.createHash('md5').update(filePath + Date.now()).digest('hex');
+      const tags = await readAudioTags(filePath);
+      const title = tags.title || name;
       const songId = library.addSong({
         yt_id: localId,
-        title: name,
-        artist: 'Unknown Artist',
-        album: folderName,
-        duration: 0,
+        title,
+        artist: tags.artist || 'Unknown Artist',
+        album: tags.album || folderName,
+        duration: tags.duration,
         file_path: filePath,
         thumbnail: '',
         format: ext,
@@ -324,40 +339,42 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
       });
       if (songId) {
         library.addToPlaylist(playlistId, songId);
-        songs.push({ id: songId, title: name, file_path: filePath });
+        songs.push({ id: songId, title, file_path: filePath });
       }
     }
 
     return { playlistId, playlistName: folderName, songs };
   });
 
-  ipcMain.handle('import-files', (event, filePaths) => {
+  ipcMain.handle('import-files', async (event, filePaths) => {
     const audioExts = ['.mp3', '.flac', '.wav', '.ogg', '.aac', '.m4a', '.wma', '.opus', '.aiff', '.ape', '.mp4', '.webm'];
     const songs = [];
-    
+
     for (const filePath of filePaths) {
       if (!fs.existsSync(filePath)) continue;
       const stat = fs.statSync(filePath);
       if (stat.isDirectory()) continue;
-      
+
       const ext = path.extname(filePath).toLowerCase();
       if (!audioExts.includes(ext)) continue;
-      
+
       const name = path.basename(filePath, path.extname(filePath));
       const localId = 'local_' + crypto.createHash('md5').update(filePath + Date.now()).digest('hex');
+      const tags = await readAudioTags(filePath);
+      const title = tags.title || name;
       const songId = library.addSong({
         yt_id: localId,
-        title: name,
-        artist: 'Unknown Artist',
-        album: 'Dropped Files',
-        duration: 0,
+        title,
+        artist: tags.artist || 'Unknown Artist',
+        album: tags.album || 'Dropped Files',
+        duration: tags.duration,
         file_path: filePath,
         thumbnail: '',
         format: ext.slice(1),
         quality: 0
       });
       if (songId) {
-        songs.push({ id: songId, title: name, file_path: filePath });
+        songs.push({ id: songId, title, file_path: filePath });
       }
     }
     return songs;
@@ -366,13 +383,8 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
   ipcMain.handle('rename-playlist', (event, id, name) => library.renamePlaylist(id, name));
   ipcMain.handle('reorder-playlist-songs', (event, playlistId, songIds) => library.reorderPlaylistSongs(playlistId, songIds));
   ipcMain.handle('search-global', (event, query) => library.searchAllSongs(query));
-  ipcMain.handle('get-smart-playlists', () => library.getSmartPlaylists());
   ipcMain.handle('export-library', () => library.exportLibrary());
   ipcMain.handle('import-library', (event, data) => library.importLibrary(data));
-  ipcMain.handle('save-bookmark', (event, songId, position, label) => library.saveBookmark(songId, position, label));
-  ipcMain.handle('get-bookmarks', (event, songId) => library.getBookmarks(songId));
-  ipcMain.handle('delete-bookmark', (event, id) => library.deleteBookmark(id));
-  ipcMain.handle('get-all-bookmarks', () => library.getAllBookmarks());
 
   ipcMain.handle('search-youtube-paginated', async (event, query, page) => {
     try {
@@ -446,78 +458,8 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
     catch(e) { throw new Error(e.message); }
   });
 
-  // M3U Export
-  ipcMain.handle('export-playlist-m3u', async (event, playlistId) => {
-    const songs = playlistId === 'favorites'
-      ? library.getAllSongs().filter(s => s.is_favorite)
-      : library.getPlaylistSongs(playlistId);
-    if (!songs.length) return false;
-    const result = await dialog.showSaveDialog(mainWindow, {
-      filters: [{ name: 'M3U Playlist', extensions: ['m3u'] }],
-      defaultPath: 'playlist.m3u'
-    });
-    if (result.canceled || !result.filePath) return false;
-    const lines = ['#EXTM3U'];
-    for (const s of songs) {
-      lines.push(`#EXTINF:${Math.round(s.duration || 0)},${s.artist || 'Unknown'} - ${s.title}`);
-      lines.push(s.file_path || '');
-    }
-    fs.writeFileSync(result.filePath, lines.join('\n'), 'utf-8');
-    return true;
-  });
-
-  // Audio Fingerprinting
-  ipcMain.handle('fingerprint-song', async (event, filePath) => {
-    try { return await getAudioFingerprint(filePath); }
-    catch(e) { throw new Error(e.message); }
-  });
-
-
-
   // Stats
   ipcMain.handle('get-listening-stats', () => library.getListeningStats());
-
-  // LAN Collaborative Playlists
-  function getLocalIp() {
-    const ifaces = os.networkInterfaces();
-    for (const iface of Object.values(ifaces)) {
-      for (const addr of iface) {
-        if (addr.family === 'IPv4' && !addr.internal) return addr.address;
-      }
-    }
-    return '127.0.0.1';
-  }
-
-  ipcMain.handle('get-local-ip', () => getLocalIp());
-
-  ipcMain.handle('start-lan-share', (event, playlistId) => {
-    if (lanServer) { try { lanServer.close(); } catch(_) {} lanServer = null; }
-    const port = 3847;
-    lanServer = http.createServer((req, res) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      if (req.url === '/') {
-        const songs = playlistId === 'favorites'
-          ? library.getAllSongs().filter(s => s.is_favorite)
-          : library.getPlaylistSongs(playlistId);
-        const playlists = library.getPlaylists();
-        const pl = playlists.find(p => p.id === playlistId);
-        res.end(JSON.stringify({ name: pl?.name || 'Shared Playlist', songs: songs.map(s => ({ title: s.title, artist: s.artist, album: s.album, duration: s.duration, thumbnail: s.thumbnail })) }));
-      } else { res.statusCode = 404; res.end(JSON.stringify({ error: 'Not found' })); }
-    });
-    try {
-      lanServer.listen(port);
-      const ip = getLocalIp();
-      return { url: `http://${ip}:${port}`, ip, port };
-    } catch(e) {
-      return { error: e.message };
-    }
-  });
-
-  ipcMain.handle('stop-lan-share', () => {
-    if (lanServer) { try { lanServer.close(); } catch(_) {} lanServer = null; }
-    return true;
-  });
 
   // ── AUDIOBOOKS (LibriVox) ────────────────────────────────────────────
 
@@ -802,4 +744,15 @@ function downloadFile(url, destPath, progressCallback) {
 }
 
 
-module.exports = { setupIpcHandlers };
+// One-time repair for local songs imported before duration/tag reading was
+// wired up (they were stored with duration = 0). Runs in the background so
+// it never delays app startup.
+async function backfillMissingDurations() {
+  const songs = library.getAllSongs().filter(s => s.file_path && fs.existsSync(s.file_path) && (!s.duration || s.duration <= 0));
+  for (const song of songs) {
+    const tags = await readAudioTags(song.file_path);
+    if (tags.duration > 0) library.updateSongMetadata(song.id, { duration: tags.duration });
+  }
+}
+
+module.exports = { setupIpcHandlers, backfillMissingDurations };

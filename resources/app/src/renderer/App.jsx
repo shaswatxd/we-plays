@@ -16,14 +16,9 @@ import SettingsView from './components/SettingsView';
 import DownloadModal from './components/DownloadModal';
 import Visualizer   from './components/Visualizer';
 import GlobalSearchView from './components/GlobalSearchView';
-import SmartPlaylistsView from './components/SmartPlaylistsView';
-import BookmarksView from './components/BookmarksView';
 import ShortcutsModal from './components/ShortcutsModal';
-import ArtistView   from './components/ArtistView';
-import AlbumView    from './components/AlbumView';
 import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
-import FingerprintModal from './components/FingerprintModal';
 import AudiobooksView from './components/audiobooks/AudiobooksView';
 import YouTubeSearchView from './components/YouTubeSearchView';
 import UpdateBanner from './components/UpdateBanner';
@@ -43,7 +38,6 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [missingBins, setMissingBins] = useState(null); // { ytdlp: bool, ffmpeg: bool }
-  const [fpSong, setFpSong] = useState(null);
   const toastRef = React.useRef(null);
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
@@ -67,6 +61,14 @@ export default function App() {
         }
       });
     }
+  }, []);
+
+  // Backend backfills missing durations for local imports in the background
+  // on startup; refresh the library once that's done.
+  useEffect(() => {
+    return window.electronAPI?.onLibraryChanged?.(() => {
+      useLibraryStore.getState().loadLibrary();
+    });
   }, []);
 
   // Sync player state → tray (animated icon + dynamic Play/Pause label)
@@ -142,8 +144,7 @@ export default function App() {
       setToast({ msg, type });
       toastRef.current = setTimeout(() => setToast(null), 3000);
     };
-    window.showFingerprintModal = (song) => setFpSong(song);
-    return () => { window.showToast = null; window.showFingerprintModal = null; clearTimeout(toastRef.current); };
+    return () => { window.showToast = null; clearTimeout(toastRef.current); };
   }, []);
 
   const openPlaylist = React.useCallback((id) => { setPlaylistId(id); setView('playlist'); }, []);
@@ -202,10 +203,6 @@ export default function App() {
       case 'playlist':    return <PlaylistView playlistId={playlistId} onDownloadTrigger={setDlSong} onViewChange={setView} />;
       case 'settings':    return <SettingsView />;
       case 'globalsearch':return <GlobalSearchView query={globalSearchQuery} onDownloadTrigger={setDlSong} onViewChange={setView} onPlaylistSelect={openPlaylist} />;
-      case 'smart':       return <SmartPlaylistsView onDownloadTrigger={setDlSong} onViewChange={setView} onPlaylistSelect={openPlaylist} />;
-      case 'bookmarks':   return <BookmarksView onDownloadTrigger={setDlSong} />;
-      case 'artists':     return <ArtistView />;
-      case 'albums':      return <AlbumView />;
       case 'stats':       return <StatsView />;
       case 'audiobooks':  return <AudiobooksView />;
       case 'ytsearch':    return <YouTubeSearchView onDownloadTrigger={setDlSong} />;
@@ -262,20 +259,6 @@ export default function App() {
         <DownloadModal song={dlSong} onClose={() => setDlSong(null)} onStarted={() => { setRightPanelTab('downloads'); setShowPanel(true); }} />
       )}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
-      {fpSong && (
-        <FingerprintModal
-          song={fpSong}
-          onClose={() => setFpSong(null)}
-          onApplyTags={async (tags) => {
-            if (fpSong?.id && tags) {
-              await window.electronAPI?.updateSongMetadata?.(fpSong.id, tags);
-              useLibraryStore.getState().loadLibrary();
-              window.showToast?.('Tags updated!', 'success');
-            }
-            setFpSong(null);
-          }}
-        />
-      )}
       {toast && (
         <div
           className="sp-toast"

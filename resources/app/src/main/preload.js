@@ -68,15 +68,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Global search
   searchGlobal: (query) => ipcRenderer.invoke('search-global', query),
 
-  // Smart playlists
-  getSmartPlaylists: () => ipcRenderer.invoke('get-smart-playlists'),
-
-  // Bookmarks
-  saveBookmark: (songId, position, label) => ipcRenderer.invoke('save-bookmark', songId, position, label),
-  getBookmarks: (songId) => ipcRenderer.invoke('get-bookmarks', songId),
-  deleteBookmark: (id) => ipcRenderer.invoke('delete-bookmark', id),
-  getAllBookmarks: () => ipcRenderer.invoke('get-all-bookmarks'),
-
   // Export/Import
   exportLibrary: () => ipcRenderer.invoke('export-library'),
   importLibrary: (data) => ipcRenderer.invoke('import-library', data),
@@ -98,20 +89,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Batch Download
   getPlaylistInfo: (url) => ipcRenderer.invoke('get-playlist-info', url),
 
-  // M3U Export
-  exportPlaylistM3u: (playlistId) => ipcRenderer.invoke('export-playlist-m3u', playlistId),
-
-  // Audio Fingerprinting
-  fingerprintSong: (filePath) => ipcRenderer.invoke('fingerprint-song', filePath),
-
-
   // Stats
   getListeningStats: () => ipcRenderer.invoke('get-listening-stats'),
-
-  // LAN Collaborative Playlists
-  getLocalIp: () => ipcRenderer.invoke('get-local-ip'),
-  startLanShare: (playlistId) => ipcRenderer.invoke('start-lan-share', playlistId),
-  stopLanShare: () => ipcRenderer.invoke('stop-lan-share'),
 
   // Tray play state sync
   updateTrayPlayState: (isPlaying, songInfo) => ipcRenderer.send('update-tray-play-state', { isPlaying, songInfo }),
@@ -120,6 +99,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 
   // Events
+  onLibraryChanged: (callback) => {
+    const fn = () => callback();
+    ipcRenderer.on('library-changed', fn);
+    return () => ipcRenderer.removeListener('library-changed', fn);
+  },
   onDownloadProgress: (callback) => {
     const fn = (event, data) => callback(data);
     ipcRenderer.on('download-progress', fn);

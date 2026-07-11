@@ -562,34 +562,6 @@ function searchAllSongs(query) {
   return { songs, playlists, history };
 }
 
-function getSmartPlaylists() {
-  const mostPlayed = queryAll('SELECT * FROM songs WHERE play_count > 0 ORDER BY play_count DESC LIMIT 50');
-  const recentlyAdded = queryAll('SELECT * FROM songs ORDER BY date_added DESC LIMIT 50');
-  const neverPlayed = queryAll('SELECT * FROM songs WHERE (play_count = 0 OR play_count IS NULL) ORDER BY date_added DESC LIMIT 50');
-  const longNotPlayed = queryAll("SELECT * FROM songs WHERE play_count > 0 AND last_played IS NOT NULL ORDER BY last_played ASC LIMIT 50");
-  return { mostPlayed, recentlyAdded, neverPlayed, longNotPlayed };
-}
-
-function getBookmarks(songId) {
-  return queryAll('SELECT * FROM bookmarks WHERE song_id = ? ORDER BY position ASC', [songId]);
-}
-
-function saveBookmark(songId, position, label) {
-  return runSql('INSERT INTO bookmarks (song_id, position, label) VALUES (?, ?, ?)', [songId, position, label || '']);
-}
-
-function deleteBookmark(bookmarkId) {
-  runSql('DELETE FROM bookmarks WHERE id = ?', [bookmarkId]);
-}
-
-function getAllBookmarks() {
-  return queryAll(`
-    SELECT b.*, s.title as song_title, s.artist as song_artist FROM bookmarks b
-    JOIN songs s ON s.id = b.song_id
-    ORDER BY b.created_at DESC
-  `);
-}
-
 function exportLibrary() {
   const songs = queryAll('SELECT * FROM songs ORDER BY date_added DESC');
   const playlists = queryAll('SELECT * FROM playlists ORDER BY created_at DESC');
@@ -851,8 +823,7 @@ module.exports = {
   getPlaylists, createPlaylist, deletePlaylist, addToPlaylist,
   removeFromPlaylist, getPlaylistSongs,
   getSettings, setSetting, saveDb,
-  renamePlaylist, reorderPlaylistSongs, searchAllSongs, getSmartPlaylists,
-  getBookmarks, saveBookmark, deleteBookmark, getAllBookmarks,
+  renamePlaylist, reorderPlaylistSongs, searchAllSongs,
   exportLibrary, importLibrary,
   findOrphanedSongs, removeOrphanedSongs, findDuplicatePlaylists, removeDuplicatePlaylists,
   getListeningStats,

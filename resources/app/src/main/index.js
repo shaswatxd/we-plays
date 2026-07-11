@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, globalShortcut, dialog, protocol, nativeIma
 const path = require('path');
 const Store = require('electron-store');
 const { initDatabase } = require('./library');
-const { setupIpcHandlers } = require('./ipc-handlers');
+const { setupIpcHandlers, backfillMissingDurations } = require('./ipc-handlers');
 const { createTray, destroyTray, updatePlayState } = require('./tray-manager');
 
 protocol.registerSchemesAsPrivileged([
@@ -113,6 +113,10 @@ app.whenReady().then(async () => {
   await initDatabase();
   createWindow();
   setupIpcHandlers(mainWindow, store, () => { isQuitting = true; });
+
+  backfillMissingDurations().then(() => {
+    mainWindow?.webContents.send('library-changed');
+  }).catch(() => {});
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

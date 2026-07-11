@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import {
   Home, Search, Library, History, Settings,
-  Plus, FolderInput, Music, Trash2, Sparkles, Bookmark,
-  Users, Disc3, BarChart2, BookOpen, Play
+  Plus, FolderInput, Music, Trash2,
+  BarChart2, BookOpen, Play
 } from 'lucide-react';
 import SpotifyHeart from './SpotifyHeart';
 
@@ -35,10 +35,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
     { id: 'audiobooks',  label: 'Audiobooks',      Icon: BookOpen  },
     { id: 'ytsearch',    label: 'YouTube Search',   Icon: Play      },
     { id: 'recent',      label: 'Recently Played', Icon: History   },
-    { id: 'smart',       label: 'Smart Lists',     Icon: Sparkles  },
-    { id: 'bookmarks',   label: 'Bookmarks',       Icon: Bookmark  },
-    { id: 'artists',     label: 'Artists',         Icon: Users     },
-    { id: 'albums',      label: 'Albums',          Icon: Disc3     },
     { id: 'stats',       label: 'Stats',           Icon: BarChart2 },
   ];
 

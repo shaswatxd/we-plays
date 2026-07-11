@@ -2,8 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore }  from '../store/playerStore';
 import SpSongRow from './SpSongRow';
-import LanShareModal from './LanShareModal';
-import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, FileDown, Share2, CheckSquare, Square } from 'lucide-react';
+import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square } from 'lucide-react';
 
 export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChange }) {
   const { 
@@ -19,7 +18,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const [renameVal, setRenameVal] = useState('');
   const [dragIdx, setDragIdx] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [showLanShare, setShowLanShare] = useState(false);
   const renameRef = useRef(null);
   const selectionMode = selectedIds.size > 0;
 
@@ -143,12 +141,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
     clearSelection();
   };
 
-  const exportM3u = async () => {
-    const ok = await window.electronAPI?.exportPlaylistM3u(playlistId);
-    if (ok) window.showToast?.('Playlist exported as M3U!', 'success');
-    else window.showToast?.('Export cancelled or failed', 'error');
-  };
-
   const handleDeletePlaylist = async () => {
     if (!playlist || playlist.isSpecial) return;
     if (window.confirm(`Are you sure you want to permanently delete the playlist "${playlist.name}"?\nSongs will remain in your library.`)) {
@@ -239,16 +231,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                 {!playlist.isSpecial && (
                   <button className="sp-ghost-btn" onClick={handleDeletePlaylist} title="Delete Playlist" style={{ color: '#f15e6c', borderColor: 'rgba(241,94,108,0.3)' }}>
                     <Trash2 size={14}/> Delete
-                  </button>
-                )}
-                {!playlist.isSpecial && (
-                  <button className="sp-ghost-btn" onClick={exportM3u} title="Export M3U">
-                    <FileDown size={14}/> M3U
-                  </button>
-                )}
-                {!playlist.isSpecial && (
-                  <button className="sp-ghost-btn" onClick={() => setShowLanShare(true)} title="Share on LAN">
-                    <Share2 size={14}/> Share
                   </button>
                 )}
               </div>
@@ -343,13 +325,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
           </>
         )}
       </div>
-      {showLanShare && (
-        <LanShareModal
-          playlistId={playlistId}
-          playlistName={playlist.name}
-          onClose={() => setShowLanShare(false)}
-        />
-      )}
     </div>
   );
 }

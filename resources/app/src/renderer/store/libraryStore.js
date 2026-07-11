@@ -7,7 +7,6 @@ export const useLibraryStore = create((set, get) => ({
   playlists: [],
   playlistSongs: {},
   settings: {},
-  smartPlaylists: null,
   globalSearchResults: null,
 
   loadLibrary: async () => {
@@ -182,15 +181,6 @@ export const useLibraryStore = create((set, get) => ({
       await get().loadPlaylistSongs(playlistId);
     } catch (err) {
       console.error('Failed to reorder playlist songs:', err);
-    }
-  },
-
-  loadSmartPlaylists: async () => {
-    try {
-      const data = await window.electronAPI?.getSmartPlaylists();
-      set({ smartPlaylists: data });
-    } catch (err) {
-      console.error('Failed to load smart playlists:', err);
     }
   },
 
