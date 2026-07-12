@@ -118,6 +118,15 @@ app.whenReady().then(async () => {
     mainWindow?.webContents.send('library-changed');
   }).catch(() => {});
 
+  // Auto-clear the HTTP web cache so it never piles up. Only clearCache() —
+  // never clearStorageData(), which would wipe localStorage app state.
+  const clearWebCache = () => {
+    const { session } = require('electron');
+    session.defaultSession?.clearCache().catch(() => {});
+  };
+  setTimeout(clearWebCache, 60 * 1000);            // once after startup settles
+  setInterval(clearWebCache, 6 * 60 * 60 * 1000);  // then every 6 hours
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

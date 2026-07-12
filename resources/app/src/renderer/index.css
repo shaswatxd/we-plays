@@ -962,6 +962,27 @@ textarea {
   flex-shrink: 0;
 }
 
+.sp-panel-close {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--sp-text-sec);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.sp-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--sp-text);
+}
+
 .sp-panel-tab {
   flex: 1;
   padding: 8px;

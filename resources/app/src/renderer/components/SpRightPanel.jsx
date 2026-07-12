@@ -42,11 +42,8 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
             )}
           </button>
         </div>
-        <button
-          style={{ background:'none',border:'none',color:'#b3b3b3',cursor:'pointer',padding:6,borderRadius:50,display:'flex',transition:'color 0.15s' }}
-          onClick={onClose}
-        >
-          <X size={16}/>
+        <button className="sp-panel-close" onClick={onClose} title="Close">
+          <X size={15}/>
         </button>
       </div>
 

@@ -3,7 +3,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { Settings, Folder, RefreshCw, Key, Search, Trash2, Check, Music, AlertTriangle, Loader2, Sparkles, ChevronDown, ChevronRight, X, Download } from 'lucide-react';
 
 export default function SettingsView() {
-  const { settings, setSetting, loadSettings, clearHistory } = useLibraryStore();
+  const { settings, setSetting, loadSettings } = useLibraryStore();
   const [dlFolder, setDlFolder] = useState('');
   const [format,   setFormat]   = useState('mp3');
   const [quality,  setQuality]  = useState(320);
@@ -130,25 +130,6 @@ export default function SettingsView() {
       setUpdateProgress(null);
     } finally {
       if (unsubscribe) unsubscribe();
-    }
-  };
-
-  const handleClearHistory = async () => {
-    if (window.confirm("Are you sure you want to clear your Recently Played history?")) {
-      await clearHistory();
-      window.showToast?.("Recently Played history cleared", "success");
-    }
-  };
-
-  const handleClearCache = async () => {
-    if (window.confirm("Are you sure you want to clear the application web cache?")) {
-      try {
-        await window.electronAPI?.clearAppCache();
-        window.showToast?.("Application cache cleared", "success");
-      } catch (err) {
-        console.error("Failed to clear cache:", err);
-        window.showToast?.("Failed to clear application cache", "error");
-      }
     }
   };
 
@@ -837,101 +818,6 @@ export default function SettingsView() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Cache & History */}
-        <div className="sp-settings-section">
-          <p className="sp-settings-title">Cache & History</p>
-          <div className="sp-settings-row">
-            <div style={{ display:'flex', flexDirection:'column' }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Recently Played History</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Clear your recently played songs history cache.</span>
-            </div>
-            <button
-              onClick={handleClearHistory}
-              style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid rgba(241,94,108,0.2)',color:'#f15e6c',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12 }}
-            >
-              Clear History
-            </button>
-          </div>
-          <div className="sp-settings-row" style={{ borderBottom:'none' }}>
-            <div style={{ display:'flex', flexDirection:'column' }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Application Web Cache</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Clear images, network audio streams, and web view temp data.</span>
-            </div>
-            <button
-              onClick={handleClearCache}
-              style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'#b3b3b3',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12 }}
-            >
-              Clear Cache
-            </button>
-          </div>
-        </div>
-
-        {/* Export/Import Library */}
-        <div className="sp-settings-section">
-          <p className="sp-settings-title">Backup & Restore</p>
-          <div className="sp-settings-row">
-            <div style={{ display:'flex', flexDirection:'column' }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Export Library</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Save your entire library, playlists, and history as a JSON backup file.</span>
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  const data = await window.electronAPI?.exportLibrary();
-                  if (data) {
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `music-library-backup-${new Date().toISOString().slice(0,10)}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    window.showToast?.('Library exported successfully', 'success');
-                  }
-                } catch (e) {
-                  window.showToast?.(`Export failed: ${e.message}`, 'error');
-                }
-              }}
-              style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid rgba(29,185,84,0.3)',color:'#1db954',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12 }}
-            >
-              <Download size={14}/> Export
-            </button>
-          </div>
-          <div className="sp-settings-row" style={{ borderBottom:'none' }}>
-            <div style={{ display:'flex', flexDirection:'column' }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Import Library</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Restore from a previously exported JSON backup file. Existing songs will not be duplicated.</span>
-            </div>
-            <button
-              onClick={async () => {
-                try {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.json';
-                  input.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const text = await file.text();
-                    const data = JSON.parse(text);
-                    const result = await window.electronAPI?.importLibrary(data);
-                    if (result) {
-                      window.showToast?.(`Imported ${result.imported} new songs`, 'success');
-                      useLibraryStore.getState().loadLibrary();
-                      useLibraryStore.getState().loadPlaylists();
-                    }
-                  };
-                  input.click();
-                } catch (e) {
-                  window.showToast?.(`Import failed: ${e.message}`, 'error');
-                }
-              }}
-              style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'#b3b3b3',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:12 }}
-            >
-              <Folder size={14}/> Import
-            </button>
-          </div>
         </div>
 
         {/* Binaries */}

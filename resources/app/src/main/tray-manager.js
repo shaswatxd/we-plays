@@ -4,6 +4,7 @@ const path = require('path');
 let tray = null;
 let mainWindow = null;
 let isPlaying = false;
+let currentSong = null;
 let animationInterval = null;
 let animationFrame = 0;
 let isQuittingRef = null;
@@ -217,9 +218,29 @@ function getStaticRoundIcon() {
 function rebuildContextMenu() {
   if (!tray) return;
 
-  const contextMenu = Menu.buildFromTemplate([
+  // Truncate long titles so the menu stays compact
+  const trunc = (s, n = 32) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+  const template = [];
+
+  // Now-playing header (Discord-style status line at the top)
+  if (currentSong && currentSong.title) {
+    template.push(
+      {
+        label: `${isPlaying ? '▶' : '⏸'}  ${trunc(currentSong.title)}`,
+        enabled: false
+      },
+      {
+        label: `      ${trunc(currentSong.artist || 'Unknown Artist', 28)}`,
+        enabled: false
+      },
+      { type: 'separator' }
+    );
+  }
+
+  template.push(
     {
-      label: 'Show We Plays',
+      label: 'Open We Plays',
       click: () => {
         if (mainWindow) {
           mainWindow.show();
@@ -230,18 +251,24 @@ function rebuildContextMenu() {
     { type: 'separator' },
     {
       label: isPlaying ? 'Pause' : 'Play',
+      accelerator: 'Space',
+      registerAccelerator: false,
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-toggle-play');
       }
     },
     {
       label: 'Next Track',
+      accelerator: 'N',
+      registerAccelerator: false,
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-next');
       }
     },
     {
       label: 'Previous Track',
+      accelerator: 'P',
+      registerAccelerator: false,
       click: () => {
         if (mainWindow) mainWindow.webContents.send('player-previous');
       }
@@ -255,9 +282,9 @@ function rebuildContextMenu() {
         app.quit();
       }
     }
-  ]);
+  );
 
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
 /**
@@ -334,6 +361,7 @@ function createTray(win, setQuitting) {
  */
 function updatePlayState(playing, songInfo) {
   isPlaying = playing;
+  if (songInfo && songInfo.title) currentSong = songInfo;
 
   // Update tooltip with current song info
   if (tray) {
