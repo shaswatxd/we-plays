@@ -1,6 +1,6 @@
 {
     "name":  "we-plays",
-    "version":  "2.0.50",
+    "version":  "2.0.51",
     "main":  "src/main/index.js",
     "description":  "We Plays - Premium Offline Music Player with YT-DLP + FFmpeg",
     "author":  "SHASWATTTT",
