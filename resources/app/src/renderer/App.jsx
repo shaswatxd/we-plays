@@ -39,6 +39,8 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [missingBins, setMissingBins] = useState(null); // { ytdlp: bool, ffmpeg: bool }
+  const [dragging, setDragging] = useState(false);
+  const dragCounter = React.useRef(0);
   const toastRef = React.useRef(null);
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
@@ -176,20 +178,89 @@ export default function App() {
 
   const handleDragOver = React.useCallback((e) => { e.preventDefault(); }, []);
 
+  const handleDragEnter = React.useCallback((e) => {
+    e.preventDefault();
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    dragCounter.current++;
+    setDragging(true);
+  }, []);
+
+  const handleDragLeave = React.useCallback((e) => {
+    e.preventDefault();
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
+    if (dragCounter.current === 0) setDragging(false);
+  }, []);
+
   const handleDrop = React.useCallback(async (e) => {
     e.preventDefault();
+    dragCounter.current = 0;
+    setDragging(false);
     if (!window.electronAPI) return;
-    const files = Array.from(e.dataTransfer.files).map(f => f.path).filter(Boolean);
-    if (files.length === 0) return;
-    window.showToast?.('Importing files...', 'info');
-    const imported = await window.electronAPI.importFiles(files);
-    if (imported && imported.length > 0) {
-      window.showToast?.(`Imported ${imported.length} files`, 'success');
-      useLibraryStore.getState().loadLibrary();
-    } else {
-      window.showToast?.('No valid audio files found', 'error');
+    // File.path no longer exists in the renderer; resolve real disk paths
+    // via the preload webUtils bridge (with a fallback for older builds).
+    const files = Array.from(e.dataTransfer.files)
+      .map(f => {
+        try { return window.electronAPI.getPathForFile?.(f) || f.path; }
+        catch { return f.path; }
+      })
+      .filter(Boolean);
+    if (files.length === 0) {
+      window.showToast?.('Could not read the dropped files', 'error');
+      return;
     }
-  }, []);
+
+    // Import into the library first (files already there resolve to their
+    // existing song ids, so re-drops don't create duplicates).
+    const imported = await window.electronAPI.importFiles(files);
+    if (!imported || imported.length === 0) {
+      window.showToast?.('No valid audio files found — drop song files, not folders', 'error');
+      return;
+    }
+
+    // Where the drop landed decides what happens next.
+    if (view === 'favorites') {
+      const before = await window.electronAPI.getAllSongs();
+      const favIds = new Set((before || []).filter(s => s.is_favorite).map(s => s.id));
+      let added = 0;
+      for (const s of imported) {
+        if (favIds.has(s.id)) continue;
+        await window.electronAPI.toggleFavorite(s.id);
+        added++;
+      }
+      const dup = imported.length - added;
+      await useLibraryStore.getState().loadLibrary();
+      if (added === 0) {
+        window.showToast?.(imported.length === 1
+          ? `"${imported[0].title}" is already in Liked Songs`
+          : 'All dropped songs are already in Liked Songs', 'info');
+      } else {
+        window.showToast?.(`Added ${added} song${added > 1 ? 's' : ''} to Liked Songs${dup ? ` (${dup} already there)` : ''}`, 'success');
+      }
+    } else if (view === 'playlist' && playlistId && playlistId !== 'favorites' && playlistId !== 'recent') {
+      const beforeSongs = await window.electronAPI.getPlaylistSongs(playlistId) || [];
+      for (const s of imported) {
+        await window.electronAPI.addToPlaylist(playlistId, s.id);
+      }
+      // Backend silently skips songs already in the playlist (by id or same
+      // title+artist), so measure what actually changed for honest feedback.
+      const afterSongs = await window.electronAPI.getPlaylistSongs(playlistId) || [];
+      const added = afterSongs.length - beforeSongs.length;
+      const dup = imported.length - added;
+      const plName = useLibraryStore.getState().playlists.find(p => p.id === playlistId)?.name || 'playlist';
+      await useLibraryStore.getState().loadPlaylistSongs(playlistId);
+      useLibraryStore.getState().loadLibrary();
+      if (added === 0) {
+        window.showToast?.(imported.length === 1
+          ? `"${imported[0].title}" is already in ${plName}`
+          : `All dropped songs are already in ${plName}`, 'info');
+      } else {
+        window.showToast?.(`Added ${added} song${added > 1 ? 's' : ''} to ${plName}${dup ? ` (${dup} already there)` : ''}`, 'success');
+      }
+    } else {
+      useLibraryStore.getState().loadLibrary();
+      window.showToast?.(`Imported ${imported.length} song${imported.length > 1 ? 's' : ''} into your library`, 'success');
+    }
+  }, [view, playlistId]);
 
   const handleGlobalSearch = React.useCallback((query) => {
     setGlobalSearchQuery(query);
@@ -214,7 +285,7 @@ export default function App() {
   const toastColor = { success: '#1db954', error: '#f15e6c', info: 'rgba(255,255,255,0.4)', warning: '#f59e0b' };
 
   return (
-    <div className="app-shell" onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div className="app-shell" onDragOver={handleDragOver} onDrop={handleDrop} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave}>
       <UpdateBanner />
       <div className="app-header-row">
         <SpTopBar
@@ -264,6 +335,32 @@ export default function App() {
         <DownloadModal song={dlSong} onClose={() => setDlSong(null)} onStarted={() => { setRightPanelTab('downloads'); setShowPanel(true); }} />
       )}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+
+      {/* Drag & drop import overlay */}
+      {dragging && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none',
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            border: '2px dashed #1db954', borderRadius: 20,
+            padding: '48px 64px', textAlign: 'center',
+            background: 'rgba(29,185,84,0.06)', maxWidth: 420
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>🎵</div>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: 0 }}>Drop your song here</p>
+            <p style={{ fontSize: 13, color: '#b3b3b3', marginTop: 8 }}>
+              {view === 'favorites'
+                ? 'It will be added to Liked Songs'
+                : view === 'playlist' && playlistId && playlistId !== 'favorites' && playlistId !== 'recent'
+                  ? `It will be added to "${useLibraryStore.getState().playlists.find(p => p.id === playlistId)?.name || 'this playlist'}"`
+                  : 'It will be imported into your library'}
+              <br/>MP3 · FLAC · WAV · M4A · OGG &amp; more
+            </p>
+          </div>
+        </div>
+      )}
       {toast && (
         <div
           className="sp-toast"

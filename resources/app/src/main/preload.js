@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Window controls
@@ -48,7 +48,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
 
   // File dialogs
+  // File.path was removed from Electron's renderer; dropped files must be
+  // resolved to disk paths through webUtils in the preload context.
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+  selectAudioFiles: () => ipcRenderer.invoke('select-audio-files'),
   importFolder: () => ipcRenderer.invoke('import-folder'),
   importFiles: (paths) => ipcRenderer.invoke('import-files', paths),
   showFileInExplorer: (filePath) => ipcRenderer.invoke('show-file-in-explorer', filePath),

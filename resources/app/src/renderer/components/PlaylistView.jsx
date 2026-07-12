@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore }  from '../store/playerStore';
 import SpSongRow from './SpSongRow';
-import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square, Plus } from 'lucide-react';
+import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square, Plus, Folder, Loader2 } from 'lucide-react';
 
 export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChange }) {
   const {
@@ -21,6 +21,7 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [addQuery, setAddQuery] = useState('');
+  const [importing, setImporting] = useState(false);
   const renameRef = useRef(null);
   const selectionMode = selectedIds.size > 0;
 
@@ -162,6 +163,65 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
     if (playlistId === 'favorites') await toggleFavorite(s.id);
     else await addToPlaylist(playlistId, s.id);
     window.showToast?.(`Added "${s.title}"`, 'success');
+  };
+
+  // Import files from disk straight into this playlist / Liked Songs.
+  // Re-imported files resolve to their existing library ids, and both the
+  // favorites check and the playlist backend skip songs already present,
+  // so duplicates are reported instead of silently re-added.
+  const importFilesToHere = async (paths) => {
+    if (!paths || paths.length === 0) return;
+    setImporting(true);
+    try {
+      const imported = await window.electronAPI.importFiles(paths);
+      if (!imported || imported.length === 0) {
+        window.showToast?.('No valid audio files found — drop song files, not folders', 'error');
+        return;
+      }
+      let added = 0;
+      if (playlistId === 'favorites') {
+        const all = await window.electronAPI.getAllSongs() || [];
+        const favIds = new Set(all.filter(s => s.is_favorite).map(s => s.id));
+        for (const s of imported) {
+          if (favIds.has(s.id)) continue;
+          await window.electronAPI.toggleFavorite(s.id);
+          added++;
+        }
+      } else {
+        const before = (await window.electronAPI.getPlaylistSongs(playlistId) || []).length;
+        for (const s of imported) {
+          await window.electronAPI.addToPlaylist(playlistId, s.id);
+        }
+        const after = (await window.electronAPI.getPlaylistSongs(playlistId) || []).length;
+        added = after - before;
+        await loadPlaylistSongs(playlistId);
+      }
+      await loadLibrary();
+      const dup = imported.length - added;
+      if (added === 0) {
+        window.showToast?.(imported.length === 1
+          ? `"${imported[0].title}" is already in ${playlist?.name || 'this playlist'}`
+          : `All ${imported.length} songs are already in ${playlist?.name || 'this playlist'}`, 'info');
+      } else {
+        window.showToast?.(`Added ${added} song${added > 1 ? 's' : ''} to ${playlist?.name || 'playlist'}${dup ? ` (${dup} already there)` : ''}`, 'success');
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const importFromDevice = async () => {
+    const paths = await window.electronAPI.selectAudioFiles?.();
+    await importFilesToHere(paths);
+  };
+
+  const handleModalDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const paths = Array.from(e.dataTransfer.files)
+      .map(f => { try { return window.electronAPI.getPathForFile?.(f) || f.path; } catch { return f.path; } })
+      .filter(Boolean);
+    importFilesToHere(paths);
   };
 
   const handleDeletePlaylist = async () => {
@@ -361,7 +421,13 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
 
       {/* Add Songs picker */}
       {showAdd && (
-        <div className="sp-modal-bg" onClick={() => setShowAdd(false)}>
+        <div
+          className="sp-modal-bg"
+          onClick={() => setShowAdd(false)}
+          onDragEnter={e => { e.preventDefault(); e.stopPropagation(); }}
+          onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+          onDrop={handleModalDrop}
+        >
           <div className="sp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth:520 }}>
             <div className="sp-modal-header">
               <span className="sp-modal-title">Add Songs to {playlist.name}</span>
@@ -383,6 +449,28 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                   <X size={14}/>
                 </button>
               )}
+            </div>
+
+            {/* Import from device + drop zone */}
+            <div style={{ display:'flex', gap:10, marginBottom:14, alignItems:'stretch' }}>
+              <div style={{
+                flex:1, border:'1.5px dashed rgba(29,185,84,0.4)', borderRadius:8,
+                padding:'10px 12px', display:'flex', alignItems:'center', gap:8,
+                color:'#b3b3b3', fontSize:12
+              }}>
+                <Music size={14} color="#1db954" style={{ flexShrink:0 }}/>
+                Drag &amp; drop songs here to add them
+              </div>
+              <button
+                onClick={importFromDevice}
+                disabled={importing}
+                style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#b3b3b3', padding:'0 14px', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:12, flexShrink:0, whiteSpace:'nowrap', opacity: importing ? 0.6 : 1 }}
+              >
+                {importing
+                  ? <><Loader2 size={13} style={{ animation:'spin 0.8s linear infinite' }}/> Importing…</>
+                  : <><Folder size={13}/> Import from Device</>
+                }
+              </button>
             </div>
 
             <div style={{ maxHeight:340, overflowY:'auto', display:'flex', flexDirection:'column', gap:2 }}>
