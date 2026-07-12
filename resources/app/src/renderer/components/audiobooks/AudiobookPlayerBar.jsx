@@ -79,7 +79,9 @@ export default function AudiobookPlayerBar({ onOpenBook }) {
 
   useEffect(() => {
     if (!howlRef.current) return;
-    if (isPlaying && !howlRef.current.playing()) howlRef.current.play();
+    // Only handle pause here — play is handled by the playTrigger effect + onplay callback.
+    // Calling play() from this effect causes double audio with HTML5 audio because
+    // .playing() can return false before the audio is fully buffered.
     if (!isPlaying && howlRef.current.playing()) howlRef.current.pause();
   }, [isPlaying]);
 
