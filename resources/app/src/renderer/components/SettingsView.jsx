@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
+import LinkDownloadSection from './LinkDownloadSection';
 import { Settings, Folder, RefreshCw, Key, Search, Trash2, Check, Music, AlertTriangle, Loader2, Sparkles, ChevronDown, ChevronRight, X, Download } from 'lucide-react';
 
 export default function SettingsView() {
@@ -389,6 +390,9 @@ export default function SettingsView() {
             </div>
           </div>
         </div>
+
+        {/* Download a song or full playlist by pasting a YouTube link */}
+        <LinkDownloadSection />
 
         {/* Library Cleaner (duplicates + missing files + duplicate playlists, one pass) */}
         <div className="sp-settings-section" style={{ border: cleanerIssues > 0 ? '1px solid rgba(29,185,84,0.2)' : undefined }}>

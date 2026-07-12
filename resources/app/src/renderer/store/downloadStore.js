@@ -110,10 +110,12 @@ export const useDownloadStore = create((set, get) => ({
     }));
   },
 
-  completeDownload: (id) => {
+  completeDownload: (id, info = {}) => {
     set(state => ({
-      downloads: state.downloads.map(d => 
-        d.id === id ? { ...d, status: 'completed', progress: 100 } : d
+      downloads: state.downloads.map(d =>
+        d.id === id
+          ? { ...d, status: 'completed', progress: 100, songId: info.songId ?? d.songId, filePath: info.filePath ?? d.filePath }
+          : d
       )
     }));
     setTimeout(() => get().processQueue(), 500);

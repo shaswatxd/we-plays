@@ -644,7 +644,6 @@ function getPlaylistInfo(url) {
     const args = [
       url,
       '--flat-playlist',
-      '--no-playlist-at-end',
       '--print', 'id,title,uploader,duration',
       '--no-warnings',
       '--quiet'
@@ -652,20 +651,22 @@ function getPlaylistInfo(url) {
 
     const proc = spawn(ytdlp, args, { windowsHide: true });
     let stdout = '';
+    let stderr = '';
     let timedOut = false;
 
     const timeout = setTimeout(() => {
       timedOut = true;
       proc.kill();
-      reject(new Error('Playlist fetch timed out.'));
-    }, 30000);
+      reject(new Error('Playlist fetch timed out. Check your internet connection.'));
+    }, 60000);
 
     proc.stdout.on('data', d => { stdout += d.toString(); });
+    proc.stderr.on('data', d => { stderr += d.toString(); });
     proc.on('close', code => {
       clearTimeout(timeout);
       if (timedOut) return;
       if (code !== 0 && !stdout.trim()) {
-        reject(new Error('Failed to fetch playlist info'));
+        reject(new Error(stderr.trim().split('\n').pop() || 'Failed to fetch playlist info'));
         return;
       }
       const lines = stdout.trim().split('\n').map(l => l.trim()).filter(Boolean);
@@ -673,7 +674,8 @@ function getPlaylistInfo(url) {
       for (let i = 0; i + 3 < lines.length; i += 4) {
         const id = lines[i];
         const title = lines[i + 1] || 'Unknown';
-        const uploader = lines[i + 2] || 'Unknown Artist';
+        const uploaderRaw = lines[i + 2];
+        const uploader = (!uploaderRaw || uploaderRaw === 'NA') ? 'Unknown Artist' : uploaderRaw;
         const durationRaw = lines[i + 3];
         const duration = durationRaw && durationRaw !== 'NA' ? parseFloat(durationRaw) : 0;
         if (!id || id === 'NA') continue;

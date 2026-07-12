@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { usePlayerStore }  from '../store/playerStore';
 import { useDownloadStore } from '../store/downloadStore';
+import { useLibraryStore } from '../store/libraryStore';
 import { X, Trash2, CheckCircle, AlertCircle, Download, Play, GripVertical, History } from 'lucide-react';
 
 const Spinner = () => (
@@ -20,14 +21,32 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const active = downloads.filter(d => d.status === 'downloading').length;
 
+  // Removing a completed download also deletes the file from disk and the
+  // library entry (remove-song IPC unlinks the file).
+  const handleRemoveDownload = async (dl) => {
+    if (dl.status === 'downloading') { cancelDownload(dl.id); return; }
+    if (dl.status === 'completed' && dl.songId) {
+      if (!window.confirm(`Delete "${dl.title}"?\n\nThis removes the song from your library AND deletes the file from disk.`)) return;
+      try {
+        await window.electronAPI?.removeSong(dl.songId);
+        useLibraryStore.getState().loadLibrary();
+        window.showToast?.('Deleted from library and disk', 'success');
+      } catch (err) {
+        window.showToast?.(`Delete failed: ${err.message}`, 'error');
+        return;
+      }
+    }
+    removeDownload(dl.id);
+  };
+
   const handleQueueDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); };
   const handleQueueDragOver = (e, idx) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIdx(idx); if (dragIdx !== null && dragIdx !== idx) reorderQueue(dragIdx, idx); };
   const handleQueueDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   return (
     <div className="sp-right-panel">
-      <div style={{ display:'flex', alignItems:'center', padding:'0 14px 0', borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 }}>
-        <div className="sp-panel-tabs" style={{ flex:1 }}>
+      <div style={{ display:'flex', alignItems:'center', padding:0, borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 }}>
+        <div className="sp-panel-tabs" style={{ flex:1, borderBottom:'none' }}>
           <button className={`sp-panel-tab${tab==='queue'?     ' active':''}`} onClick={() => setTab('queue')}>Queue</button>
           <button className={`sp-panel-tab${tab==='history'?   ' active':''}`} onClick={() => setTab('history')} style={{ position:'relative' }}>
             History
@@ -42,7 +61,7 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
             )}
           </button>
         </div>
-        <button className="sp-panel-close" onClick={onClose} title="Close">
+        <button className="sp-panel-close" onClick={onClose} title="Close" style={{ marginRight:10 }}>
           <X size={15}/>
         </button>
       </div>
@@ -178,8 +197,9 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
                     </div>
                     <button
                       style={{ background:'none',border:'none',color:'#b3b3b3',cursor:'pointer',padding:4,borderRadius:50,display:'flex',flexShrink:0 }}
-                      onClick={() => dl.status==='downloading' ? cancelDownload(dl.id) : removeDownload(dl.id)}
-                    ><X size={12}/></button>
+                      title={dl.status==='downloading' ? 'Cancel' : dl.status==='completed' && dl.songId ? 'Delete from library & disk' : 'Remove'}
+                      onClick={() => handleRemoveDownload(dl)}
+                    >{dl.status==='completed' && dl.songId ? <Trash2 size={12}/> : <X size={12}/>}</button>
                   </div>
                   {dl.status==='downloading' && (
                     <div className="sp-dl-progress" style={{ marginTop:8 }}>

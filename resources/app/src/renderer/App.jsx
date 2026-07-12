@@ -112,7 +112,7 @@ export default function App() {
       useDownloadStore.getState().updateProgress(d.id, d);
     });
     const cleanComplete = window.electronAPI.onDownloadComplete(d => {
-      useDownloadStore.getState().completeDownload(d.id);
+      useDownloadStore.getState().completeDownload(d.id, { songId: d.songId, filePath: d.metadata?.file_path });
       useLibraryStore.getState().loadLibrary();
       window.showToast?.('Download complete!', 'success');
     });
