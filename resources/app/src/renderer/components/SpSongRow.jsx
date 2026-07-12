@@ -113,7 +113,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
         <div style={{ display:'flex', alignItems:'center', gap:12, minWidth:0, paddingRight:12 }}>
           <div className="sp-song-thumb">
             {song.thumbnail
-              ? <img src={song.thumbnail} alt="" />
+              ? <img src={song.thumbnail} alt="" loading="lazy" decoding="async" />
               : <div className="sp-song-thumb-ph"><Music size={14}/></div>
             }
           </div>

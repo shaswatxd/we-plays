@@ -684,7 +684,7 @@ textarea {
   position: relative;
   border: 1px solid transparent;
   content-visibility: auto;
-  contain-intrinsic-size: 0 52px;
+  contain-intrinsic-size: 0 54px;
 }
 
 .sp-song-row:hover {
@@ -1985,11 +1985,6 @@ button:active:not(:disabled) {
 }
 
 /* ── Global smoothness pass ── */
-
-/* Programmatic + anchor scrolling glides instead of jumping */
-* {
-  scroll-behavior: smooth;
-}
 
 /* Every button gets smooth state changes + tactile press feedback.
    :where() keeps specificity at zero so component-specific rules

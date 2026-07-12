@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useLibraryStore } from './store/libraryStore';
 import { useDownloadStore } from './store/downloadStore';
 import { usePlayerStore } from './store/playerStore';
@@ -18,10 +18,13 @@ import GlobalSearchView from './components/GlobalSearchView';
 import ShortcutsModal from './components/ShortcutsModal';
 import StatsView    from './components/StatsView';
 import LyricsView   from './components/LyricsView';
-import AudiobooksView from './components/audiobooks/AudiobooksView';
 import YouTubeSearchView from './components/YouTubeSearchView';
 import UpdateBanner from './components/UpdateBanner';
-import AudiobookPlayerBar from './components/audiobooks/AudiobookPlayerBar';
+
+// Audiobooks are code-split: none of their JS loads (and no LibriVox
+// requests fire) until the user actually opens the Audiobooks view.
+const AudiobooksView = lazy(() => import('./components/audiobooks/AudiobooksView'));
+const AudiobookPlayerBar = lazy(() => import('./components/audiobooks/AudiobookPlayerBar'));
 import { useActivePlayerStore } from './store/activePlayerStore';
 import { useAudiobookPlayerStore } from './store/audiobookPlayerStore';
 
@@ -232,19 +235,25 @@ export default function App() {
         />
         <div className="sp-main sp-dynamic-theme">
           <div className="sp-main-scroll">
-            {renderView()}
+            <Suspense fallback={null}>
+              {renderView()}
+            </Suspense>
           </div>
         </div>
         {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} initialTab={rightPanelTab} />}
       </div>
-      {/* Both player bars stay mounted at all times so their Howl/audio logic
-          keeps running regardless of which one is visible — only one is
-          ever playing at once (mutual exclusion is handled in the stores),
-          but unmounting the inactive bar would kill its ability to react
-          to a new play command. */}
-      <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'block' : 'none' }}>
-        <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
-      </div>
+      {/* The music player bar stays mounted at all times so its Howl/audio
+          logic keeps running regardless of visibility. The audiobook bar only
+          mounts once a book has been opened (audiobookCurrentBook is never
+          cleared back to null, so its Howl instance survives player switches);
+          before that it would just idle and tick timers for nothing. */}
+      {audiobookCurrentBook && (
+        <div style={{ display: activePlayer === 'audiobook' ? 'block' : 'none' }}>
+          <Suspense fallback={null}>
+            <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
+          </Suspense>
+        </div>
+      )}
       <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'none' : 'block' }}>
         <SpPlayerBar
           onToggleLyrics={() => setShowLyrics(l => !l)}
