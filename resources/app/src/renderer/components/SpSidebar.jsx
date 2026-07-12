@@ -3,7 +3,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import {
   Home, Search, Library, History, Settings,
   Plus, FolderInput, Music, Trash2, ListMusic,
-  BarChart2, BookOpen, Play
+  BarChart2, Play
 } from 'lucide-react';
 import SpotifyHeart from './SpotifyHeart';
 
@@ -32,7 +32,6 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
   };
 
   const navItems = [
-    { id: 'audiobooks',  label: 'Audiobooks',      Icon: BookOpen  },
     { id: 'ytsearch',    label: 'YouTube Search',   Icon: Play      },
     { id: 'recent',      label: 'Recently Played', Icon: History   },
     { id: 'stats',       label: 'Stats',           Icon: BarChart2 },

@@ -139,54 +139,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('player-previous', fn);
   },
 
-  // ── Audiobooks (LibriVox) ────────────────────────────────────────────
-  audiobookSearch: (params) => ipcRenderer.invoke('audiobook-search', params),
-  audiobookGetBook: (id) => ipcRenderer.invoke('audiobook-get-book', id),
-  audiobookSearchAuthors: (name) => ipcRenderer.invoke('audiobook-search-authors', name),
-
-  audiobookDownloadChapter: (options) => ipcRenderer.invoke('audiobook-download-chapter', options),
-  audiobookPauseDownload: (bookId, chapterIndex) => ipcRenderer.invoke('audiobook-pause-download', bookId, chapterIndex),
-  audiobookCancelDownload: (bookId, chapterIndex) => ipcRenderer.invoke('audiobook-cancel-download', bookId, chapterIndex),
-  audiobookDeleteDownload: (bookId, chapterIndex) => ipcRenderer.invoke('audiobook-delete-download', bookId, chapterIndex),
-  audiobookGetDownloads: () => ipcRenderer.invoke('audiobook-get-downloads'),
-  audiobookIsDownloaded: (bookId, chapterIndex) => ipcRenderer.invoke('audiobook-is-downloaded', bookId, chapterIndex),
-  audiobookGetChapterPath: (bookId, chapterIndex) => ipcRenderer.invoke('audiobook-get-chapter-path', bookId, chapterIndex),
-
-  audiobookGetFavorites: () => ipcRenderer.invoke('audiobook-get-favorites'),
-  audiobookIsFavorite: (bookId) => ipcRenderer.invoke('audiobook-is-favorite', bookId),
-  audiobookToggleFavorite: (book) => ipcRenderer.invoke('audiobook-toggle-favorite', book),
-
-  audiobookGetProgress: (bookId) => ipcRenderer.invoke('audiobook-get-progress', bookId),
-  audiobookGetAllProgress: () => ipcRenderer.invoke('audiobook-get-all-progress'),
-  audiobookSaveProgress: (bookId, chapterIndex, position, duration, book) =>
-    ipcRenderer.invoke('audiobook-save-progress', bookId, chapterIndex, position, duration, book),
-  audiobookRemoveProgress: (bookId) => ipcRenderer.invoke('audiobook-remove-progress', bookId),
-
-  audiobookGetBookmarks: (bookId) => ipcRenderer.invoke('audiobook-get-bookmarks', bookId),
-  audiobookSaveBookmark: (bookId, chapterIndex, position, label) =>
-    ipcRenderer.invoke('audiobook-save-bookmark', bookId, chapterIndex, position, label),
-  audiobookDeleteBookmark: (id) => ipcRenderer.invoke('audiobook-delete-bookmark', id),
-
-  audiobookAddHistory: (bookId, book) => ipcRenderer.invoke('audiobook-add-history', bookId, book),
-  audiobookGetHistory: () => ipcRenderer.invoke('audiobook-get-history'),
-  audiobookClearHistory: () => ipcRenderer.invoke('audiobook-clear-history'),
-
-  onAudiobookDownloadProgress: (callback) => {
-    const fn = (event, data) => callback(data);
-    ipcRenderer.on('audiobook-download-progress', fn);
-    return () => ipcRenderer.removeListener('audiobook-download-progress', fn);
-  },
-  onAudiobookDownloadComplete: (callback) => {
-    const fn = (event, data) => callback(data);
-    ipcRenderer.on('audiobook-download-complete', fn);
-    return () => ipcRenderer.removeListener('audiobook-download-complete', fn);
-  },
-  onAudiobookDownloadError: (callback) => {
-    const fn = (event, data) => callback(data);
-    ipcRenderer.on('audiobook-download-error', fn);
-    return () => ipcRenderer.removeListener('audiobook-download-error', fn);
-  },
-
   // Auto-Updater
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkAppUpdate: () => ipcRenderer.invoke('check-app-update'),

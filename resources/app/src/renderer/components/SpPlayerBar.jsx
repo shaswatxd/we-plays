@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePlayerStore } from '../store/playerStore';
 import { useLibraryStore } from '../store/libraryStore';
-import { useAudiobookPlayerStore } from '../store/audiobookPlayerStore';
 import { useActivePlayerStore } from '../store/activePlayerStore';
 import {
   Play, Pause, SkipBack, SkipForward,
@@ -169,18 +168,6 @@ export default function SpPlayerBar({ onToggleLyrics }) {
       playSong(currentSong, isManualTransition);
     }
   }, [playTrigger, currentSong, isManualTransition]);
-
-  // Mutual exclusion: pause the audiobook player whenever music starts playing.
-  useEffect(() => {
-    if (isPlaying) {
-      const abState = useAudiobookPlayerStore.getState();
-      if (abState.isPlaying) {
-        abState.howl?.pause();
-        useAudiobookPlayerStore.setState({ isPlaying: false });
-      }
-      useActivePlayerStore.getState().setActive('music');
-    }
-  }, [isPlaying]);
 
   useEffect(() => {
     if (isPlaying) {

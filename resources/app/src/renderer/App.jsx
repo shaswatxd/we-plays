@@ -2,8 +2,6 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useLibraryStore } from './store/libraryStore';
 import { useDownloadStore } from './store/downloadStore';
 import { usePlayerStore } from './store/playerStore';
-import { useAudiobookStore } from './store/audiobookStore';
-
 import SpSidebar    from './components/SpSidebar';
 import SpPlayerBar  from './components/SpPlayerBar';
 import SpTopBar     from './components/SpTopBar';
@@ -21,12 +19,7 @@ import LyricsView   from './components/LyricsView';
 import YouTubeSearchView from './components/YouTubeSearchView';
 import UpdateBanner from './components/UpdateBanner';
 
-// Audiobooks are code-split: none of their JS loads (and no LibriVox
-// requests fire) until the user actually opens the Audiobooks view.
-const AudiobooksView = lazy(() => import('./components/audiobooks/AudiobooksView'));
-const AudiobookPlayerBar = lazy(() => import('./components/audiobooks/AudiobookPlayerBar'));
 import { useActivePlayerStore } from './store/activePlayerStore';
-import { useAudiobookPlayerStore } from './store/audiobookPlayerStore';
 
 export default function App() {
   const [view,       setView]       = useState('search');
@@ -43,7 +36,6 @@ export default function App() {
 
   const { loadLibrary, loadPlaylists, loadSettings } = useLibraryStore();
   const activePlayer = useActivePlayerStore(s => s.active);
-  const audiobookCurrentBook = useAudiobookPlayerStore(s => s.currentBook);
 
   useEffect(() => {
     loadLibrary();
@@ -124,22 +116,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!window.electronAPI) return;
-    const cleanProgress = window.electronAPI.onAudiobookDownloadProgress(d => {
-      useAudiobookStore.getState().updateDownloadProgress(d);
-    });
-    const cleanComplete = window.electronAPI.onAudiobookDownloadComplete(d => {
-      useAudiobookStore.getState().markDownloadStatus(d.bookId, d.chapterIndex, 'completed');
-      window.showToast?.(`Downloaded: ${d.title || 'Chapter'}`, 'success');
-    });
-    const cleanError = window.electronAPI.onAudiobookDownloadError(d => {
-      useAudiobookStore.getState().markDownloadStatus(d.bookId, d.chapterIndex, 'error');
-      window.showToast?.(`Audiobook download failed: ${d.message}`, 'error');
-    });
-    return () => { cleanProgress?.(); cleanComplete?.(); cleanError?.(); };
-  }, []);
-
-  useEffect(() => {
     window.showToast = (msg, type = 'info') => {
       clearTimeout(toastRef.current);
       setToast({ msg, type });
@@ -189,7 +165,6 @@ export default function App() {
       case 'settings':    return <SettingsView />;
       case 'globalsearch':return <GlobalSearchView query={globalSearchQuery} onDownloadTrigger={setDlSong} onViewChange={setView} onPlaylistSelect={openPlaylist} />;
       case 'stats':       return <StatsView />;
-      case 'audiobooks':  return <AudiobooksView />;
       case 'ytsearch':    return <YouTubeSearchView onDownloadTrigger={setDlSong} />;
       default:            return <SearchView   onDownloadTrigger={setDlSong} />;
     }
@@ -226,18 +201,6 @@ export default function App() {
         </div>
         {showPanel && <SpRightPanel onClose={() => setShowPanel(false)} initialTab={rightPanelTab} />}
       </div>
-      {/* The music player bar stays mounted at all times so its Howl/audio
-          logic keeps running regardless of visibility. The audiobook bar only
-          mounts once a book has been opened (audiobookCurrentBook is never
-          cleared back to null, so its Howl instance survives player switches);
-          before that it would just idle and tick timers for nothing. */}
-      {audiobookCurrentBook && (
-        <div style={{ display: activePlayer === 'audiobook' ? 'block' : 'none' }}>
-          <Suspense fallback={null}>
-            <AudiobookPlayerBar onOpenBook={() => setView('audiobooks')} />
-          </Suspense>
-        </div>
-      )}
       <div style={{ display: activePlayer === 'audiobook' && audiobookCurrentBook ? 'none' : 'block' }}>
         <SpPlayerBar
           onToggleLyrics={() => setShowLyrics(l => !l)}
