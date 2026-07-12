@@ -185,6 +185,18 @@ Receive-Job $gitJob -Wait -AutoRemoveJob 2>$null | Out-Null
 
 if ($uploadOk) {
     Write-Ok "Release uploaded  ->  $($SETUP.Name) ($sizeMB MB)"
+
+    # Keep only the latest release on GitHub — delete every older release + tag.
+    # Only runs after a successful upload so we never end up with zero releases.
+    Write-Info "Cleaning up old GitHub releases..."
+    $oldTags = gh release list --repo $REPO --limit 100 --json tagName --jq '.[].tagName' 2>$null | Where-Object { $_ -and $_ -ne $TAG }
+    $cleaned = 0
+    foreach ($t in $oldTags) {
+        gh release delete $t --repo $REPO --yes --cleanup-tag 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $cleaned++ }
+    }
+    if ($cleaned -gt 0) { Write-Ok "Removed $cleaned old release(s) - only $TAG remains" }
+    else { Write-Ok "No old releases to clean" }
 } else {
     Write-Err "GitHub release upload failed. Run 'gh auth login' if unauthenticated."
 }

@@ -74,92 +74,122 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
             return;
           }
 
-          const ext = options.format || 'mp3';
-          // Extract YouTube video ID from URL for reliable file finding
-          const urlMatch = options.url ? options.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
-          const videoId = urlMatch ? urlMatch[1] : (options.id || result.id);
+          try {
+            const ext = options.format || 'mp3';
+            // Extract YouTube video ID from URL for reliable file finding
+            const urlMatch = options.url ? options.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
+            const videoId = urlMatch ? urlMatch[1] : (options.id || result.id);
 
-          // Find file by video ID (yt-dlp now outputs as %(id)s.%(ext)s)
-          const idFilename = `${videoId}.${ext}`;
-          const altExts = ext === 'mp3' ? ['webm', 'm4a', 'opus'] : [ext];
-          let actualPath = path.join(downloadPath, idFilename);
-          if (!fs.existsSync(actualPath)) {
-            for (const ae of altExts) {
-              const candidate = path.join(downloadPath, `${videoId}.${ae}`);
-              if (fs.existsSync(candidate)) { actualPath = candidate; break; }
+            // Find file by video ID (yt-dlp now outputs as %(id)s.%(ext)s)
+            const idFilename = `${videoId}.${ext}`;
+            const altExts = ext === 'mp3' ? ['webm', 'm4a', 'opus'] : [ext];
+            let actualPath = path.join(downloadPath, idFilename);
+            if (!fs.existsSync(actualPath)) {
+              for (const ae of altExts) {
+                const candidate = path.join(downloadPath, `${videoId}.${ae}`);
+                if (fs.existsSync(candidate)) { actualPath = candidate; break; }
+              }
             }
-          }
-          if (!fs.existsSync(actualPath)) {
-            const files = fs.readdirSync(downloadPath)
-              .filter(f => f.startsWith(videoId) && altExts.some(ae => f.endsWith(`.${ae}`)))
-              .sort((a, b) => fs.statSync(path.join(downloadPath, b)).mtimeMs - fs.statSync(path.join(downloadPath, a)).mtimeMs);
-            if (files.length > 0) actualPath = path.join(downloadPath, files[0]);
-          }
-
-          // Rename file to search result title for better organization
-          if (fs.existsSync(actualPath) && options.title) {
-            const sanitized = options.title.replace(/[<>:"/\\|?*]/g, '_');
-            const newPath = path.join(downloadPath, `${sanitized}.${ext}`);
-            if (actualPath !== newPath && !fs.existsSync(newPath)) {
+            if (!fs.existsSync(actualPath)) {
               try {
-                fs.renameSync(actualPath, newPath);
-                actualPath = newPath;
+                const files = fs.readdirSync(downloadPath)
+                  .filter(f => f.startsWith(videoId) && altExts.some(ae => f.endsWith(`.${ae}`)))
+                  .sort((a, b) => fs.statSync(path.join(downloadPath, b)).mtimeMs - fs.statSync(path.join(downloadPath, a)).mtimeMs);
+                if (files.length > 0) actualPath = path.join(downloadPath, files[0]);
               } catch (err) {
-                console.error('Failed to rename downloaded file:', err);
+                console.error('Error scanning download folder:', err);
               }
             }
-          }
 
-          if (!fs.existsSync(actualPath)) {
-            actualPath = path.join(downloadPath, `${options.title || videoId}.${ext}`);
-          }
-
-          const metadata = {
-            yt_id: options.id || result.id,
-            title: options.title || 'Unknown',
-            artist: options.artist || 'Unknown Artist',
-            album: options.album || 'Unknown Album',
-            duration: options.duration || 0,
-            file_path: actualPath,
-            thumbnail: options.thumbnail || null,
-            format: ext,
-            quality: options.quality || 320
-          };
-
-          const songId = library.addSong(metadata);
-          
-          if (songId) {
-            if (options.addToFavorites) {
-              const song = library.getSongById(songId);
-              if (song && !song.is_favorite) {
-                library.toggleFavorite(songId);
+            // Rename file to search result title for better organization
+            if (fs.existsSync(actualPath) && options.title) {
+              const sanitized = options.title.replace(/[<>:"/\\|?*]/g, '_');
+              const newPath = path.join(downloadPath, `${sanitized}.${ext}`);
+              if (actualPath !== newPath && !fs.existsSync(newPath)) {
+                try {
+                  fs.renameSync(actualPath, newPath);
+                  actualPath = newPath;
+                } catch (err) {
+                  console.error('Failed to rename downloaded file:', err);
+                }
               }
             }
-            if (options.addToPlaylistId) {
-              library.addToPlaylist(options.addToPlaylistId, songId);
-            }
-          }
 
-          mainWindow.webContents.send('download-complete', {
-            id: result.id,
-            songId,
-            metadata
-          });
-          resolve({ id: result.id, songId });
+            if (!fs.existsSync(actualPath)) {
+              actualPath = path.join(downloadPath, `${options.title || videoId}.${ext}`);
+            }
+
+            const metadata = {
+              yt_id: options.id || result.id,
+              title: options.title || 'Unknown',
+              artist: options.artist || 'Unknown Artist',
+              album: options.album || 'Unknown Album',
+              duration: options.duration || 0,
+              file_path: actualPath,
+              thumbnail: options.thumbnail || null,
+              format: ext,
+              quality: options.quality || 320
+            };
+
+            let songId = null;
+            try {
+              songId = library.addSong(metadata);
+            } catch (err) {
+              console.error('Failed to add song to library:', err);
+            }
+
+            if (songId) {
+              try {
+                if (options.addToFavorites) {
+                  const song = library.getSongById(songId);
+                  if (song && !song.is_favorite) {
+                    library.toggleFavorite(songId);
+                  }
+                }
+                if (options.addToPlaylistId) {
+                  library.addToPlaylist(options.addToPlaylistId, songId);
+                }
+              } catch (err) {
+                console.error('Failed to update song metadata:', err);
+              }
+            }
+
+            mainWindow.webContents.send('download-complete', {
+              id: result.id,
+              songId,
+              metadata
+            });
+            resolve({ id: result.id, songId });
+          } catch (err) {
+            console.error('Error in download complete handler:', err);
+            // Still send completion so the UI updates and doesn't stay stuck
+            try {
+              mainWindow.webContents.send('download-complete', {
+                id: result.id,
+                songId: null,
+                metadata: { file_path: path.join(downloadPath, `${options.title || result.id}.${options.format || 'mp3'}`) }
+              });
+            } catch {}
+            resolve({ id: result.id, songId: null });
+          }
         },
         (error) => {
-          const msg = error?.message || String(error);
-          const id = error?.id || 'unknown';
-          const dlInfo = activeDownloads.get(id);
-          const wasCancelled = dlInfo?.cancelled;
-          activeDownloads.delete(id);
-          if (wasCancelled) {
-            // Don't send error event for user-cancelled downloads
-            resolve({ id, cancelled: true });
-            return;
+          try {
+            const msg = error?.message || String(error);
+            const id = error?.id || 'unknown';
+            const dlInfo = activeDownloads.get(id);
+            const wasCancelled = dlInfo?.cancelled;
+            activeDownloads.delete(id);
+            if (wasCancelled) {
+              resolve({ id, cancelled: true });
+              return;
+            }
+            mainWindow.webContents.send('download-error', { id, error: msg });
+            reject(new Error(msg));
+          } catch (err) {
+            console.error('Error in download error handler:', err);
+            try { reject(err); } catch {}
           }
-          mainWindow.webContents.send('download-error', { id, error: msg });
-          reject(new Error(msg));
         }
       );
 

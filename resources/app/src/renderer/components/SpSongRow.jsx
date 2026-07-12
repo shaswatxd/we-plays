@@ -5,7 +5,7 @@ import { useLibraryStore } from '../store/libraryStore';
 import { Play, Download, Plus, Trash2, Folder, MoreVertical, Music } from 'lucide-react';
 import SpotifyHeart from './SpotifyHeart';
 
-export default React.memo(function SpSongRow({ song, index, isSearchItem, onDownloadTrigger, onRemovePlaylistSong, onClick }) {
+export default React.memo(function SpSongRow({ song, index, isSearchItem, onDownloadTrigger, onRemovePlaylistSong, onClick, onSongUpdated }) {
   const { currentSong, isPlaying, playSong, addToQueue } = usePlayerStore();
   const { toggleFavorite, removeSong, playlists, addToPlaylist } = useLibraryStore();
   const [showMenu, setShowMenu]   = useState(false);
@@ -60,7 +60,7 @@ export default React.memo(function SpSongRow({ song, index, isSearchItem, onDown
 
   const fav = async (e) => {
     e.stopPropagation();
-    if (song.id) { await toggleFavorite(song.id); }
+    if (song.id) { await toggleFavorite(song.id); onSongUpdated?.(); }
   };
 
   const openMenu = (e) => {

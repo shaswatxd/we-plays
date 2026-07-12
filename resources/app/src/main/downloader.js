@@ -355,6 +355,22 @@ function downloadSong(options, onProgress, onComplete, onError) {
   const proc = spawn(ytdlp, args, { windowsHide: true });
   const downloadId = id || Date.now().toString();
   let stderrOutput = '';
+  let completed = false;
+  let completeTimer = null;
+
+  const safeComplete = (data) => {
+    if (completed) return;
+    completed = true;
+    clearTimeout(completeTimer);
+    onComplete(data);
+  };
+
+  const safeError = (data) => {
+    if (completed) return;
+    completed = true;
+    clearTimeout(completeTimer);
+    onError(data);
+  };
 
   proc.stdout.on('data', (data) => {
     const output = data.toString();
@@ -364,13 +380,23 @@ function downloadSong(options, onProgress, onComplete, onError) {
     const sizeMatch = output.match(/of\s+~?([\d.]+\s*\w+)/);
 
     if (progressMatch) {
+      const pct = parseFloat(progressMatch[1]);
       onProgress({
         id: downloadId,
-        progress: parseFloat(progressMatch[1]),
+        progress: pct,
         speed: speedMatch ? speedMatch[1] : null,
         eta: etaMatch ? etaMatch[1] : null,
         totalSize: sizeMatch ? sizeMatch[1] : null
       });
+      // Safety: if yt-dlp hits 100% but doesn't exit within 120s, force-complete
+      if (pct >= 100 && !completeTimer) {
+        completeTimer = setTimeout(() => {
+          if (!completed) {
+            console.warn(`yt-dlp didn't exit after 100% for download ${downloadId}, force-completing`);
+            safeComplete({ id: downloadId, outputPath });
+          }
+        }, 120000);
+      }
     }
   });
 
@@ -391,15 +417,15 @@ function downloadSong(options, onProgress, onComplete, onError) {
 
   proc.on('close', (code) => {
     if (code === 0) {
-      onComplete({ id: downloadId, outputPath });
+      safeComplete({ id: downloadId, outputPath });
     } else {
       const detail = stderrOutput.trim() || 'No error details available';
-      onError({ id: downloadId, message: `yt-dlp exited with code ${code}: ${detail}` });
+      safeError({ id: downloadId, message: `yt-dlp exited with code ${code}: ${detail}` });
     }
   });
 
   proc.on('error', (err) => {
-    onError({ id: downloadId, message: err.message });
+    safeError({ id: downloadId, message: err.message });
   });
 
   return { id: downloadId, process: proc };

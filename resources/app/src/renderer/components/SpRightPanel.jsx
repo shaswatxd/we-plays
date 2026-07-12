@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { usePlayerStore }  from '../store/playerStore';
 import { useDownloadStore } from '../store/downloadStore';
 import { useLibraryStore } from '../store/libraryStore';
-import { X, Trash2, CheckCircle, AlertCircle, Download, Play, GripVertical, History } from 'lucide-react';
+import { X, Trash2, CheckCircle, AlertCircle, Download, Play, History } from 'lucide-react';
 
 const Spinner = () => (
   <div style={{ width:18,height:18,border:'2px solid #1db954',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite',flexShrink:0 }} />
@@ -15,10 +15,8 @@ function fmtDur(s) {
 
 export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
   const [tab, setTab] = useState(initialTab);
-  const { queue, queueIndex, currentSong, playSong, removeFromQueue, clearQueue, reorderQueue, playHistory, clearPlayHistory } = usePlayerStore();
+  const { queue, queueIndex, currentSong, playSong, removeFromQueue, clearQueue, playHistory, clearPlayHistory } = usePlayerStore();
   const { downloads, clearCompleted, cancelDownload, removeDownload } = useDownloadStore();
-  const [dragIdx, setDragIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
   const active = downloads.filter(d => d.status === 'downloading').length;
 
   // Removing a completed download also deletes the file from disk and the
@@ -38,10 +36,6 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
     }
     removeDownload(dl.id);
   };
-
-  const handleQueueDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); };
-  const handleQueueDragOver = (e, idx) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIdx(idx); if (dragIdx !== null && dragIdx !== idx) reorderQueue(dragIdx, idx); };
-  const handleQueueDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   return (
     <div className="sp-right-panel">
@@ -98,14 +92,9 @@ export default function SpRightPanel({ onClose, initialTab = 'queue' }) {
                   return (
                     <div
                       key={`${i}-${s.id}`}
-                      className={`sp-queue-item${dragIdx === i ? ' dragging' : ''}${dragOverIdx === i && dragIdx !== i ? ' drag-over' : ''}`}
-                      draggable
-                      onDragStart={(e) => handleQueueDragStart(e, i)}
-                      onDragOver={(e) => handleQueueDragOver(e, i)}
-                      onDragEnd={handleQueueDragEnd}
+                      className="sp-queue-item"
                       onClick={() => { playSong(s); usePlayerStore.setState({ queueIndex: i }); }}
                     >
-                      <GripVertical size={12} style={{ color:'#6a6a6a', cursor:'grab', flexShrink:0 }} />
                       {s.thumbnail && <img src={s.thumbnail} alt="" style={{ width:36,height:36,borderRadius:4,objectFit:'cover',flexShrink:0 }}/>}
                       <div style={{ flex:1,minWidth:0 }}>
                         <p style={{ fontSize:13,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{s.title}</p>

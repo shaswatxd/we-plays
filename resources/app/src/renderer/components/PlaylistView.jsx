@@ -2,12 +2,12 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore }  from '../store/playerStore';
 import SpSongRow from './SpSongRow';
-import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square, Plus, Folder, Loader2 } from 'lucide-react';
+import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, Pencil, CheckSquare, Square, Plus, Folder, Loader2 } from 'lucide-react';
 
 export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChange }) {
   const {
     playlists, playlistSongs, loadPlaylistSongs, removeFromPlaylist, deletePlaylist, renamePlaylist,
-    favorites, recent, loadFavorites, loadRecent, reorderPlaylistSongs,
+    favorites, recent, loadFavorites, loadRecent,
     songs: librarySongs, addToPlaylist, toggleFavorite, loadLibrary
   } = useLibraryStore();
   const { playPlaylist } = usePlayerStore();
@@ -17,7 +17,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const [sortDir, setSortDir] = useState('asc');
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState('');
-  const [dragIdx, setDragIdx] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [addQuery, setAddQuery] = useState('');
@@ -25,18 +24,22 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const renameRef = useRef(null);
   const selectionMode = selectedIds.size > 0;
 
-  const isSpecial = playlistId === 'favorites' || playlistId === 'recent';
+  const isSpecial = playlistId === 'favorites' || playlistId === 'recent' || playlistId === 'allsongs';
   const playlist = playlistId === 'favorites'
     ? { name: 'Liked Songs', isSpecial: true, gradient: 'linear-gradient(135deg,#450af5,#c4efd9)', art: '💚' }
     : playlistId === 'recent'
       ? { name: 'Recently Played', isSpecial: true, gradient: 'linear-gradient(135deg,#4b5563,#1f2937)', art: '🕐' }
-      : playlists.find(p => p.id === playlistId);
+      : playlistId === 'allsongs'
+        ? { name: 'All Songs', isSpecial: true, gradient: 'linear-gradient(135deg,#1db954,#134e3a)', art: '🎵' }
+        : playlists.find(p => p.id === playlistId);
 
   const songs = playlistId === 'favorites'
     ? favorites
     : playlistId === 'recent'
       ? recent
-      : (playlistSongs[playlistId] || []);
+      : playlistId === 'allsongs'
+        ? librarySongs
+        : (playlistSongs[playlistId] || []);
 
   const filteredSongs = songs.filter(s => 
     (s.title || '').toLowerCase().includes(filterQuery.toLowerCase()) ||
@@ -78,19 +81,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
     setRenaming(false);
   };
 
-  const handleDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; };
-  const handleDragOver = (e, idx) => {
-    e.preventDefault();
-    if (dragIdx !== null && dragIdx !== idx) {
-      const songIds = sortedSongs.map(s => s.id);
-      const [moved] = songIds.splice(dragIdx, 1);
-      songIds.splice(idx, 0, moved);
-      reorderPlaylistSongs(playlistId, songIds);
-      setDragIdx(idx);
-    }
-  };
-  const handleDragEnd = () => { setDragIdx(null); };
-
   useEffect(() => {
     if (!playlistId) return;
     setFilterQuery('');
@@ -100,6 +90,8 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
       loadFavorites().finally(() => setLoading(false));
     } else if (playlistId === 'recent') {
       loadRecent().finally(() => setLoading(false));
+    } else if (playlistId === 'allsongs') {
+      loadLibrary().finally(() => setLoading(false));
     } else {
       loadPlaylistSongs(playlistId).finally(() => setLoading(false));
     }
@@ -147,7 +139,7 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
 
   // "Add Songs" picker — works for regular playlists and Liked Songs
   // (adding to Liked Songs = marking the song as favorite).
-  const canAddSongs = playlistId !== 'recent';
+  const canAddSongs = playlistId !== 'recent' && playlistId !== 'allsongs';
   const openAdd = () => { setAddQuery(''); setShowAdd(true); loadLibrary(); };
 
   const existingIds = new Set(songs.map(s => s.id));
@@ -213,15 +205,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const importFromDevice = async () => {
     const paths = await window.electronAPI.selectAudioFiles?.();
     await importFilesToHere(paths);
-  };
-
-  const handleModalDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const paths = Array.from(e.dataTransfer.files)
-      .map(f => { try { return window.electronAPI.getPathForFile?.(f) || f.path; } catch { return f.path; } })
-      .filter(Boolean);
-    importFilesToHere(paths);
   };
 
   const handleDeletePlaylist = async () => {
@@ -385,10 +368,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                 {sortedSongs.map((s, i) => (
                   <div
                     key={`${playlistId}-${s.id || i}`}
-                    draggable={!playlist.isSpecial && !selectionMode}
-                    onDragStart={(e) => handleDragStart(e, i)}
-                    onDragOver={(e) => handleDragOver(e, i)}
-                    onDragEnd={handleDragEnd}
                     style={{ display:'flex', alignItems:'center', position:'relative' }}
                   >
                     {/* Checkbox */}
@@ -398,9 +377,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                     >
                       {selectedIds.has(s.id) ? <CheckSquare size={14}/> : <Square size={14}/>}
                     </button>
-                    {!playlist.isSpecial && !selectionMode && (
-                      <GripVertical size={12} style={{ color:'#6a6a6a', cursor:'grab', margin:'0 4px', flexShrink:0, opacity: dragIdx === i ? 1 : 0.3, transition:'opacity 0.15s' }} />
-                    )}
                     <div style={{ flex:1 }}>
                       <SpSongRow
                         song={s}
@@ -424,9 +400,6 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
         <div
           className="sp-modal-bg"
           onClick={() => setShowAdd(false)}
-          onDragEnter={e => { e.preventDefault(); e.stopPropagation(); }}
-          onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
-          onDrop={handleModalDrop}
         >
           <div className="sp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth:520 }}>
             <div className="sp-modal-header">
@@ -451,16 +424,8 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
               )}
             </div>
 
-            {/* Import from device + drop zone */}
+            {/* Import from device */}
             <div style={{ display:'flex', gap:10, marginBottom:14, alignItems:'stretch' }}>
-              <div style={{
-                flex:1, border:'1.5px dashed rgba(29,185,84,0.4)', borderRadius:8,
-                padding:'10px 12px', display:'flex', alignItems:'center', gap:8,
-                color:'#b3b3b3', fontSize:12
-              }}>
-                <Music size={14} color="#1db954" style={{ flexShrink:0 }}/>
-                Drag &amp; drop songs here to add them
-              </div>
               <button
                 onClick={importFromDevice}
                 disabled={importing}

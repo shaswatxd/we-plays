@@ -1,6 +1,11 @@
 ; ── We Plays Custom Uninstall Script ────────────────────────────────────────
 ; Asks the user whether to delete all app data during uninstallation.
 
+; Skip the "Only for me / For all users" selection page - install directly for current user
+!macro customInstallMode
+  StrCpy $isForceCurrentInstall "1"
+!macroend
+
 !macro customUnInstall
   ; Ask user if they want to remove all app data
   MessageBox MB_YESNO|MB_ICONQUESTION \

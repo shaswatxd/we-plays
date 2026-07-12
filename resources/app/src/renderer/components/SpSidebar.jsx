@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import {
   Home, Search, Library, History, Settings,
-  Plus, FolderInput, Music, Trash2,
+  Plus, FolderInput, Music, Trash2, ListMusic,
   BarChart2, BookOpen, Play
 } from 'lucide-react';
 import SpotifyHeart from './SpotifyHeart';
@@ -79,6 +79,20 @@ export default function SpSidebar({ view, onViewChange, onPlaylistSelect, playli
           )}
 
           <div className="sp-playlist-list">
+            {/* All Songs */}
+            <div
+              className={`sp-playlist-item${view === 'allsongs' ? ' active' : ''}`}
+              onClick={() => onViewChange('allsongs')}
+            >
+              <div className="sp-playlist-thumb" style={{ background: 'rgba(29,185,84,0.15)' }}>
+                <ListMusic size={18} color="#1db954" />
+              </div>
+              <div className="sp-playlist-info">
+                <p className="sp-playlist-name">All Songs</p>
+                <p className="sp-playlist-sub">Library</p>
+              </div>
+            </div>
+
             {/* Special items */}
             <div
               className={`sp-playlist-item${view === 'favorites' ? ' active' : ''}`}

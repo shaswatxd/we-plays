@@ -22,6 +22,16 @@ export default function GlobalSearchView({ query, onDownloadTrigger, onViewChang
     search();
   }, [query]);
 
+  const refetchResults = async () => {
+    if (!query || query.length < 2) return;
+    try {
+      const res = await window.electronAPI?.searchGlobal(query);
+      setResults(res);
+    } catch (e) {
+      console.error('Global search refetch error:', e);
+    }
+  };
+
   if (loading) return (
     <div style={{ padding: 24 }}>
       <p style={{ fontSize:22, fontWeight:800, marginBottom:20 }}>Searching library for "{query}"...</p>
@@ -109,6 +119,7 @@ export default function GlobalSearchView({ query, onDownloadTrigger, onViewChang
               isSearchItem={false}
               onDownloadTrigger={onDownloadTrigger}
               onClick={() => playPlaylist(results.songs, i)}
+              onSongUpdated={refetchResults}
             />
           ))}
         </div>
@@ -135,6 +146,7 @@ export default function GlobalSearchView({ query, onDownloadTrigger, onViewChang
               isSearchItem={false}
               onDownloadTrigger={onDownloadTrigger}
               onClick={() => playPlaylist(results.history, i)}
+              onSongUpdated={refetchResults}
             />
           ))}
         </div>
