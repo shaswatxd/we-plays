@@ -33,7 +33,7 @@ const ItemRow = React.memo(function ItemRow({ title, artist, duration, status, p
 });
 
 export default function LinkDownloadSection() {
-  const { settings } = useLibraryStore();
+  const { settings, playlists, loadPlaylists } = useLibraryStore();
   const startDownload = useDownloadStore(s => s.startDownload);
   const downloads = useDownloadStore(s => s.downloads);
 
@@ -43,7 +43,10 @@ export default function LinkDownloadSection() {
   const [format, setFormat] = useState('mp3');
   const [quality, setQuality] = useState(320);
   const [folder, setFolder] = useState('');
+  const [addToPl, setAddToPl] = useState('');
   const [batchIds, setBatchIds] = useState(null); // Set of download ids once batch started
+
+  useEffect(() => { loadPlaylists(); }, []);
 
   useEffect(() => {
     if (settings.downloadFolder && !folder) setFolder(settings.downloadFolder);
@@ -87,7 +90,10 @@ export default function LinkDownloadSection() {
     if (!folder) { window.showToast?.('Please select a download folder', 'error'); return; }
     if (items.length === 0) return;
     const ids = new Set();
-    const config = { format, quality, outputPath: folder, embedThumbnail: true, addMetadata: true };
+    const config = {
+      format, quality, outputPath: folder, embedThumbnail: true, addMetadata: true,
+      addToPlaylistId: addToPl ? Number(addToPl) : null
+    };
     items.forEach(it => {
       const id = it.id || `link_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       ids.add(id);
@@ -214,6 +220,23 @@ export default function LinkDownloadSection() {
                   ><Folder size={14}/> Browse</button>
                 </div>
               </div>
+
+              {playlists && playlists.length > 0 && (
+                <div>
+                  <label className="sp-label">Add to Playlist (Optional)</label>
+                  <select
+                    className="sp-select"
+                    style={{ width:'100%' }}
+                    value={addToPl}
+                    onChange={e => setAddToPl(e.target.value)}
+                  >
+                    <option value="">-- None --</option>
+                    {playlists.map(pl => (
+                      <option key={pl.id} value={pl.id}>{pl.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
 

@@ -2,12 +2,13 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLibraryStore } from '../store/libraryStore';
 import { usePlayerStore }  from '../store/playerStore';
 import SpSongRow from './SpSongRow';
-import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square } from 'lucide-react';
+import { Play, Shuffle, Music, Clock, Trash2, Search, X, ArrowUpDown, GripVertical, Pencil, CheckSquare, Square, Plus } from 'lucide-react';
 
 export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChange }) {
-  const { 
+  const {
     playlists, playlistSongs, loadPlaylistSongs, removeFromPlaylist, deletePlaylist, renamePlaylist,
-    favorites, recent, loadFavorites, loadRecent, reorderPlaylistSongs
+    favorites, recent, loadFavorites, loadRecent, reorderPlaylistSongs,
+    songs: librarySongs, addToPlaylist, toggleFavorite, loadLibrary
   } = useLibraryStore();
   const { playPlaylist } = usePlayerStore();
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,8 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
   const [renameVal, setRenameVal] = useState('');
   const [dragIdx, setDragIdx] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showAdd, setShowAdd] = useState(false);
+  const [addQuery, setAddQuery] = useState('');
   const renameRef = useRef(null);
   const selectionMode = selectedIds.size > 0;
 
@@ -141,6 +144,26 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
     clearSelection();
   };
 
+  // "Add Songs" picker — works for regular playlists and Liked Songs
+  // (adding to Liked Songs = marking the song as favorite).
+  const canAddSongs = playlistId !== 'recent';
+  const openAdd = () => { setAddQuery(''); setShowAdd(true); loadLibrary(); };
+
+  const existingIds = new Set(songs.map(s => s.id));
+  const addCandidates = showAdd
+    ? librarySongs.filter(s =>
+        !existingIds.has(s.id) &&
+        ((s.title || '').toLowerCase().includes(addQuery.toLowerCase()) ||
+         (s.artist || '').toLowerCase().includes(addQuery.toLowerCase()) ||
+         (s.album || '').toLowerCase().includes(addQuery.toLowerCase())))
+    : [];
+
+  const addSongTo = async (s) => {
+    if (playlistId === 'favorites') await toggleFavorite(s.id);
+    else await addToPlaylist(playlistId, s.id);
+    window.showToast?.(`Added "${s.title}"`, 'success');
+  };
+
   const handleDeletePlaylist = async () => {
     if (!playlist || playlist.isSpecial) return;
     if (window.confirm(`Are you sure you want to permanently delete the playlist "${playlist.name}"?\nSongs will remain in your library.`)) {
@@ -217,6 +240,11 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                playlistId === 'recent' ? 'Start listening to build your recently played list.' :
                'Right-click songs in your library to add them here.'}
             </p>
+            {canAddSongs && (
+              <button className="sp-ghost-btn" onClick={openAdd} style={{ marginTop:16 }}>
+                <Plus size={14}/> Add Songs
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -228,6 +256,11 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
                 <button className="sp-ghost-btn" onClick={shuffle}>
                   <Shuffle size={14}/> Shuffle
                 </button>
+                {canAddSongs && (
+                  <button className="sp-ghost-btn" onClick={openAdd}>
+                    <Plus size={14}/> Add Songs
+                  </button>
+                )}
                 {!playlist.isSpecial && (
                   <button className="sp-ghost-btn" onClick={handleDeletePlaylist} title="Delete Playlist" style={{ color: '#f15e6c', borderColor: 'rgba(241,94,108,0.3)' }}>
                     <Trash2 size={14}/> Delete
@@ -325,6 +358,79 @@ export default function PlaylistView({ playlistId, onDownloadTrigger, onViewChan
           </>
         )}
       </div>
+
+      {/* Add Songs picker */}
+      {showAdd && (
+        <div className="sp-modal-bg" onClick={() => setShowAdd(false)}>
+          <div className="sp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth:520 }}>
+            <div className="sp-modal-header">
+              <span className="sp-modal-title">Add Songs to {playlist.name}</span>
+              <button className="sp-modal-close" onClick={() => setShowAdd(false)}><X size={18}/></button>
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', background:'rgba(255,255,255,0.06)', borderRadius:8, padding:'8px 12px', border:'1px solid rgba(255,255,255,0.1)', marginBottom:14 }}>
+              <Search size={14} color="#b3b3b3" style={{ marginRight:8, flexShrink:0 }}/>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search your library…"
+                value={addQuery}
+                onChange={e => setAddQuery(e.target.value)}
+                style={{ background:'none', border:'none', color:'#fff', fontSize:13, width:'100%', outline:'none', WebkitUserSelect:'text', userSelect:'text' }}
+              />
+              {addQuery && (
+                <button onClick={() => setAddQuery('')} style={{ background:'none', border:'none', color:'#b3b3b3', cursor:'pointer', display:'flex', padding:0 }}>
+                  <X size={14}/>
+                </button>
+              )}
+            </div>
+
+            <div style={{ maxHeight:340, overflowY:'auto', display:'flex', flexDirection:'column', gap:2 }}>
+              {addCandidates.length === 0 ? (
+                <div className="sp-empty" style={{ padding:'40px 0' }}>
+                  <p className="sp-empty-title" style={{ fontSize:14 }}>
+                    {librarySongs.length === 0 ? 'Your library is empty'
+                      : addQuery ? 'No matches found'
+                      : 'All library songs are already here'}
+                  </p>
+                </div>
+              ) : (
+                addCandidates.map(s => (
+                  <div
+                    key={`add-${s.id}`}
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 10px', borderRadius:6, cursor:'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => addSongTo(s)}
+                  >
+                    {s.thumbnail
+                      ? <img src={s.thumbnail} alt="" style={{ width:34, height:34, borderRadius:4, objectFit:'cover', flexShrink:0 }}/>
+                      : <div style={{ width:34, height:34, borderRadius:4, background:'rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Music size={14} color="#6a6a6a"/></div>
+                    }
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:13, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.title}</p>
+                      <p style={{ fontSize:11, color:'#b3b3b3', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.artist || 'Unknown'}</p>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); addSongTo(s); }}
+                      title="Add"
+                      style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'1px solid rgba(29,185,84,0.5)', color:'#1db954', padding:'5px 12px', borderRadius:99, cursor:'pointer', fontWeight:700, fontSize:11, flexShrink:0 }}
+                    ><Plus size={12}/> Add</button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="sp-modal-footer">
+              <button
+                className="btn-green"
+                onClick={() => setShowAdd(false)}
+                style={{ padding:'10px 28px', fontSize:13, fontWeight:800, borderRadius:99 }}
+              >Done</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
