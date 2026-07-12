@@ -33,7 +33,7 @@ export default function SpTopBar({ view, showPanel, onTogglePanel, onGlobalSearc
   return (
     <div className={`sp-topbar${scrolled ? ' scrolled' : ''}`}>
       <div className="sp-search-wrap">
-        <Search className="sp-search-icon" size={16} />
+        <Search className="sp-search-icon" size={14} />
         <input
           type="text"
           className="sp-search-input"
@@ -44,7 +44,7 @@ export default function SpTopBar({ view, showPanel, onTogglePanel, onGlobalSearc
         />
         {q && (
           <button className="sp-search-clear" onClick={clear}>
-            <X size={15} />
+            <X size={13} />
           </button>
         )}
       </div>

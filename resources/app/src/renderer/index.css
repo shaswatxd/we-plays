@@ -122,7 +122,7 @@ textarea {
    ══════════════════════════════════════════ */
 .app-shell {
   display: grid;
-  grid-template-rows: 64px 1fr 90px;
+  grid-template-rows: 52px 1fr 90px;
   grid-template-columns: 1fr;
   height: 100vh;
   background: var(--sp-black);
@@ -134,7 +134,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  height: 52px;
   background: #000000;
   padding: 0 16px;
   -webkit-app-region: drag;
@@ -496,12 +496,12 @@ textarea {
 .sp-search-wrap {
   position: relative;
   flex: 1;
-  max-width: 380px;
+  max-width: 340px;
 }
 
 .sp-search-icon {
   position: absolute;
-  left: 12px;
+  left: 11px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--sp-text-dim);
@@ -514,7 +514,7 @@ textarea {
   border: 2px solid transparent;
   color: var(--sp-text);
   border-radius: var(--r-full);
-  padding: 9px 36px 9px 38px;
+  padding: 7px 32px 7px 33px;
   font-size: 13px;
   font-weight: 500;
   outline: none;
@@ -569,6 +569,7 @@ textarea {
   border-color: var(--sp-text);
   color: var(--sp-text);
   background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
 }
 
 .sp-queue-btn.active {
@@ -1947,7 +1948,51 @@ button:active:not(:disabled) {
 
 /* Smooth page transitions */
 .sp-main-scroll > * {
-  animation: fadeIn 0.15s ease;
+  animation: sp-view-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sp-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Global smoothness pass ── */
+
+/* Programmatic + anchor scrolling glides instead of jumping */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Every button gets smooth state changes + tactile press feedback.
+   :where() keeps specificity at zero so component-specific rules
+   (e.g. .sp-search-clear's translateY positioning) always win. */
+:where(button) {
+  transition: transform var(--t-fast), background var(--t-fast),
+    color var(--t-fast), border-color var(--t-fast),
+    box-shadow var(--t-fast), opacity var(--t-fast);
+}
+
+:where(button):active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Accessibility: honor OS-level reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Smooth reveal for scan results / dynamically-appearing blocks */
@@ -2841,7 +2886,7 @@ button:active:not(:disabled) {
 
 .sp-update-banner {
   position: fixed;
-  top: 44px;
+  top: 60px;
   right: 16px;
   z-index: 9998;
   display: flex;

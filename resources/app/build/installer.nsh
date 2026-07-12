@@ -1,6 +1,12 @@
 ; ── We Plays Custom Uninstall Script ────────────────────────────────────────
 ; Asks the user whether to delete all app data during uninstallation.
 
+; Without a DPI-aware manifest Windows bitmap-stretches the installer and
+; uninstaller dialogs on high-DPI displays, making all text blurry.
+!macro customHeader
+  ManifestDPIAware true
+!macroend
+
 !macro customUnInstall
   ; Ask user if they want to remove all app data
   MessageBox MB_YESNO|MB_ICONQUESTION \
