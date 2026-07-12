@@ -1950,6 +1950,50 @@ button:active:not(:disabled) {
   animation: fadeIn 0.15s ease;
 }
 
+/* Smooth reveal for scan results / dynamically-appearing blocks */
+.sp-reveal {
+  animation: slideUp var(--t-std) both;
+}
+
+.sp-reveal-row {
+  animation: fadeIn var(--t-fast) both;
+}
+
+/* Smooth expand/collapse for accordion-style detail rows */
+.sp-collapse {
+  animation: sp-collapse-open var(--t-std) cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+@keyframes sp-collapse-open {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+
+  to {
+    opacity: 1;
+    max-height: 600px;
+  }
+}
+
+/* Checkbox / selectable-row micro-interactions */
+.sp-check-box {
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+
+.sp-check-box:active {
+  transform: scale(0.88);
+}
+
+.sp-row-hover {
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+
+.sp-row-hover:hover {
+  transform: translateX(2px);
+}
+
 /* Toast smooth */
 .sp-toast {
   transition: opacity 0.2s ease;

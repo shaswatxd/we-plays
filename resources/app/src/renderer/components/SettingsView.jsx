@@ -42,6 +42,8 @@ export default function SettingsView() {
   const [dupPlDone, setDupPlDone] = useState(false);
   const [dupPlError, setDupPlError] = useState('');
 
+  const [scannedOnce, setScannedOnce] = useState(false);
+
   useEffect(() => {
     loadSettings();
     checkBins();
@@ -334,6 +336,16 @@ export default function SettingsView() {
 
   const totalOrphanSelected = orphanSongs.filter(s => orphanSelected[s.id]).length;
   const totalDupPlSelected = dupPlGroups.reduce((sum, g, gi) => sum + g.remove.filter(r => dupPlSelected[`${gi}-${r.id}`]).length, 0);
+  const totalDupPlAll = dupPlGroups.reduce((sum, g) => sum + g.remove.length, 0);
+
+  const cleanerScanning = dupScanning || orphanScanning || dupPlScanning;
+  const cleanerError = dupError || orphanError || dupPlError;
+  const cleanerIssues = totalDups + orphanSongs.length + totalDupPlAll;
+
+  const scanLibrary = async () => {
+    setScannedOnce(true);
+    await Promise.all([scanDuplicates(), scanOrphaned(), scanDupPlaylists()]);
+  };
 
   return (
     <div style={{ padding: '24px 24px 40px 24px' }}>
@@ -397,67 +409,71 @@ export default function SettingsView() {
           </div>
         </div>
 
-        {/* Duplicate Cleaner */}
-        <div className="sp-settings-section" style={{ border: dupGroups.length > 0 ? '1px solid rgba(29,185,84,0.2)' : undefined }}>
+        {/* Library Cleaner (duplicates + missing files + duplicate playlists, one pass) */}
+        <div className="sp-settings-section" style={{ border: cleanerIssues > 0 ? '1px solid rgba(29,185,84,0.2)' : undefined }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <Sparkles size={14} color="#1db954"/>
-            <p className="sp-settings-title" style={{ margin:0 }}>Duplicate Cleaner</p>
+            <p className="sp-settings-title" style={{ margin:0 }}>Library Cleaner</p>
           </div>
 
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
             <div style={{ display:'flex', flexDirection:'column', minWidth:0 }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Scan for Duplicate Songs</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Finds songs with the same title &amp; artist, same file path, or same song name from different sources.</span>
+              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Scan Your Library</span>
+              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Finds duplicate songs, missing files, and duplicate playlists in one scan.</span>
             </div>
             <button
-              onClick={scanDuplicates}
-              disabled={dupScanning}
+              onClick={scanLibrary}
+              disabled={cleanerScanning}
               className="btn-green"
               style={{ display:'flex',alignItems:'center',gap:6,padding:'10px 20px',fontSize:13,flexShrink:0 }}
             >
-              {dupScanning
+              {cleanerScanning
                 ? <><Loader2 size={14} style={{ animation:'spin 0.8s linear infinite' }}/> Scanning…</>
                 : <><Search size={14}/> Scan Now</>
               }
             </button>
           </div>
 
-          {dupError && (
-            <div style={{
+          {cleanerError && (
+            <div className="sp-reveal" style={{
               background:'rgba(241,94,108,0.1)', border:'1px solid rgba(241,94,108,0.2)',
               borderRadius:8, padding:'12px 14px', fontSize:12, color:'#f15e6c',
               display:'flex', alignItems:'flex-start', gap:8
             }}>
               <AlertTriangle size={16} style={{ flexShrink:0, marginTop:1 }}/>
-              <span>{dupError}</span>
+              <span>{dupError || orphanError || dupPlError}</span>
             </div>
           )}
 
-          {dupDone && !dupError && (
-            <div style={{
+          {scannedOnce && !cleanerScanning && !cleanerError && cleanerIssues === 0 && (
+            <div className="sp-reveal" style={{
               background:'rgba(29,185,84,0.1)', border:'1px solid rgba(29,185,84,0.2)',
               borderRadius:8, padding:'12px 14px', fontSize:12, color:'#1db954',
               display:'flex', alignItems:'center', gap:8
             }}>
               <Check size={16}/>
-              <span>No duplicate songs found in your library!</span>
+              <span>Library is clean! No duplicates, missing files, or duplicate playlists found.</span>
             </div>
           )}
 
-          {!dupScanning && dupGroups.length === 0 && !dupDone && !dupError && (
+          {!cleanerScanning && !scannedOnce && (
             <div style={{
               background:'rgba(255,255,255,0.02)', border:'1px dashed rgba(255,255,255,0.08)',
               borderRadius:8, padding:'24px 16px', textAlign:'center'
             }}>
               <Music size={28} color="#6a6a6a" style={{ marginBottom:8 }}/>
               <p style={{ fontSize:12, color:'#6a6a6a', margin:0 }}>
-                Click "Scan Now" to find duplicate songs in your library.
+                Click "Scan Now" to check your library for duplicate songs, missing files, and duplicate playlists.
               </p>
             </div>
           )}
 
           {dupGroups.length > 0 && (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div className="sp-reveal" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+                <Sparkles size={12} color="#1db954"/>
+                <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>Duplicate Songs</span>
+              </div>
               <div style={{
                 display:'flex', alignItems:'center', justifyContent:'space-between',
                 background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px'
@@ -508,7 +524,7 @@ export default function SettingsView() {
                 const allSel = group.remove.every(r => dupSelected[`${gi}-${r.id}`]);
                 const someSel = group.remove.some(r => dupSelected[`${gi}-${r.id}`]);
                 return (
-                  <div key={gi} style={{
+                  <div key={gi} className="sp-reveal sp-row-hover" style={{
                     background:'rgba(255,255,255,0.02)',
                     border:'1px solid rgba(255,255,255,0.06)',
                     borderRadius:8, overflow:'hidden'
@@ -518,6 +534,7 @@ export default function SettingsView() {
                     }}>
                       <div
                         onClick={() => toggleGroupSel(gi)}
+                        className="sp-check-box"
                         style={{
                           width:18, height:18, borderRadius:4,
                           border:`2px solid ${allSel ? '#1db954' : someSel ? '#f59e0b' : 'rgba(255,255,255,0.2)'}`,
@@ -553,7 +570,7 @@ export default function SettingsView() {
                     </div>
 
                     {isExpanded && (
-                      <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding:'4px 0' }}>
+                      <div className="sp-collapse" style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding:'4px 0' }}>
                         <div style={{
                           display:'flex', alignItems:'center', gap:8,
                           padding:'8px 14px 8px 42px', fontSize:11
@@ -584,7 +601,7 @@ export default function SettingsView() {
                               onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                               onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                             >
-                              <div style={{
+                              <div className="sp-check-box" style={{
                                 width:16, height:16, borderRadius:3,
                                 border:`2px solid ${isSel ? '#f15e6c' : 'rgba(255,255,255,0.15)'}`,
                                 display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -616,69 +633,13 @@ export default function SettingsView() {
               })}
             </div>
           )}
-        </div>
-
-        {/* Orphaned Songs Cleaner */}
-        <div className="sp-settings-section" style={{ border: orphanSongs.length > 0 ? '1px solid rgba(245,158,11,0.2)' : undefined }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <AlertTriangle size={14} color="#f59e0b"/>
-            <p className="sp-settings-title" style={{ margin:0 }}>Orphaned Songs Cleaner</p>
-          </div>
-
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-            <div style={{ display:'flex', flexDirection:'column', minWidth:0 }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Scan for Missing Files</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Finds songs in your library whose audio files no longer exist on disk.</span>
-            </div>
-            <button
-              onClick={scanOrphaned}
-              disabled={orphanScanning}
-              className="btn-green"
-              style={{ display:'flex',alignItems:'center',gap:6,padding:'10px 20px',fontSize:13,flexShrink:0 }}
-            >
-              {orphanScanning
-                ? <><Loader2 size={14} style={{ animation:'spin 0.8s linear infinite' }}/> Scanning…</>
-                : <><Search size={14}/> Scan Now</>
-              }
-            </button>
-          </div>
-
-          {orphanError && (
-            <div style={{
-              background:'rgba(241,94,108,0.1)', border:'1px solid rgba(241,94,108,0.2)',
-              borderRadius:8, padding:'12px 14px', fontSize:12, color:'#f15e6c',
-              display:'flex', alignItems:'flex-start', gap:8
-            }}>
-              <AlertTriangle size={16} style={{ flexShrink:0, marginTop:1 }}/>
-              <span>{orphanError}</span>
-            </div>
-          )}
-
-          {orphanDone && !orphanError && (
-            <div style={{
-              background:'rgba(29,185,84,0.1)', border:'1px solid rgba(29,185,84,0.2)',
-              borderRadius:8, padding:'12px 14px', fontSize:12, color:'#1db954',
-              display:'flex', alignItems:'center', gap:8
-            }}>
-              <Check size={16}/>
-              <span>No orphaned songs found. All files exist on disk!</span>
-            </div>
-          )}
-
-          {!orphanScanning && orphanSongs.length === 0 && !orphanDone && !orphanError && (
-            <div style={{
-              background:'rgba(255,255,255,0.02)', border:'1px dashed rgba(255,255,255,0.08)',
-              borderRadius:8, padding:'24px 16px', textAlign:'center'
-            }}>
-              <AlertTriangle size={28} color="#6a6a6a" style={{ marginBottom:8 }}/>
-              <p style={{ fontSize:12, color:'#6a6a6a', margin:0 }}>
-                Click "Scan Now" to find songs with missing files.
-              </p>
-            </div>
-          )}
 
           {orphanSongs.length > 0 && (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div className="sp-reveal" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+                <AlertTriangle size={12} color="#f59e0b"/>
+                <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>Missing Files</span>
+              </div>
               <div style={{
                 display:'flex', alignItems:'center', justifyContent:'space-between',
                 background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px'
@@ -736,7 +697,7 @@ export default function SettingsView() {
                       onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                       onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <div style={{
+                      <div className="sp-check-box" style={{
                         width:16, height:16, borderRadius:3,
                         border:`2px solid ${isSel ? '#f15e6c' : 'rgba(255,255,255,0.15)'}`,
                         display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -764,69 +725,13 @@ export default function SettingsView() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Duplicate Playlists Cleaner */}
-        <div className="sp-settings-section" style={{ border: dupPlGroups.length > 0 ? '1px solid rgba(29,185,84,0.2)' : undefined }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <Music size={14} color="#1db954"/>
-            <p className="sp-settings-title" style={{ margin:0 }}>Duplicate Playlists Cleaner</p>
-          </div>
-
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-            <div style={{ display:'flex', flexDirection:'column', minWidth:0 }}>
-              <span className="sp-settings-key" style={{ color:'#fff', fontWeight:700 }}>Scan for Duplicate Playlists</span>
-              <span style={{ fontSize:11, color:'#b3b3b3', marginTop:2 }}>Finds playlists with the same name. Keeps the oldest one.</span>
-            </div>
-            <button
-              onClick={scanDupPlaylists}
-              disabled={dupPlScanning}
-              className="btn-green"
-              style={{ display:'flex',alignItems:'center',gap:6,padding:'10px 20px',fontSize:13,flexShrink:0 }}
-            >
-              {dupPlScanning
-                ? <><Loader2 size={14} style={{ animation:'spin 0.8s linear infinite' }}/> Scanning…</>
-                : <><Search size={14}/> Scan Now</>
-              }
-            </button>
-          </div>
-
-          {dupPlError && (
-            <div style={{
-              background:'rgba(241,94,108,0.1)', border:'1px solid rgba(241,94,108,0.2)',
-              borderRadius:8, padding:'12px 14px', fontSize:12, color:'#f15e6c',
-              display:'flex', alignItems:'flex-start', gap:8
-            }}>
-              <AlertTriangle size={16} style={{ flexShrink:0, marginTop:1 }}/>
-              <span>{dupPlError}</span>
-            </div>
-          )}
-
-          {dupPlDone && !dupPlError && (
-            <div style={{
-              background:'rgba(29,185,84,0.1)', border:'1px solid rgba(29,185,84,0.2)',
-              borderRadius:8, padding:'12px 14px', fontSize:12, color:'#1db954',
-              display:'flex', alignItems:'center', gap:8
-            }}>
-              <Check size={16}/>
-              <span>No duplicate playlists found!</span>
-            </div>
-          )}
-
-          {!dupPlScanning && dupPlGroups.length === 0 && !dupPlDone && !dupPlError && (
-            <div style={{
-              background:'rgba(255,255,255,0.02)', border:'1px dashed rgba(255,255,255,0.08)',
-              borderRadius:8, padding:'24px 16px', textAlign:'center'
-            }}>
-              <Music size={28} color="#6a6a6a" style={{ marginBottom:8 }}/>
-              <p style={{ fontSize:12, color:'#6a6a6a', margin:0 }}>
-                Click "Scan Now" to find duplicate playlists.
-              </p>
-            </div>
-          )}
 
           {dupPlGroups.length > 0 && (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div className="sp-reveal" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+                <Music size={12} color="#1db954"/>
+                <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>Duplicate Playlists</span>
+              </div>
               <div style={{
                 display:'flex', alignItems:'center', justifyContent:'space-between',
                 background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 14px'
@@ -873,7 +778,7 @@ export default function SettingsView() {
               </div>
 
               {dupPlGroups.map((group, gi) => (
-                <div key={gi} style={{
+                <div key={gi} className="sp-reveal sp-row-hover" style={{
                   background:'rgba(255,255,255,0.02)',
                   border:'1px solid rgba(255,255,255,0.06)',
                   borderRadius:8, padding:'10px 14px'
@@ -905,7 +810,7 @@ export default function SettingsView() {
                         onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                         onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <div style={{
+                        <div className="sp-check-box" style={{
                           width:16, height:16, borderRadius:3,
                           border:`2px solid ${isSel ? '#f15e6c' : 'rgba(255,255,255,0.15)'}`,
                           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
