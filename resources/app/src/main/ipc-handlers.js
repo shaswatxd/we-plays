@@ -284,17 +284,6 @@ function setupIpcHandlers(mainWindow, store, forceQuit) {
     return result.canceled ? [] : result.filePaths;
   });
 
-  ipcMain.handle('select-audio-files', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Select Songs',
-      properties: ['openFile', 'multiSelections'],
-      filters: [
-        { name: 'Audio Files', extensions: ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a', 'wma', 'opus', 'aiff', 'ape', 'mp4', 'webm'] }
-      ]
-    });
-    return result.canceled ? [] : result.filePaths;
-  });
-
   ipcMain.handle('show-file-in-explorer', (event, filePath) => {
     if (filePath && fs.existsSync(filePath)) {
       shell.showItemInFolder(filePath);
