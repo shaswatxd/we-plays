@@ -37,6 +37,7 @@
       </div>
       <div class="nav-links">
         <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
         <a href="#mockup">App Interface</a>
         <a href="#dependencies">Dependencies</a>
         <a href="https://github.com/shaswatxd/we-plays" class="btn-github" target="_blank" id="nav-github-link">
@@ -178,39 +179,95 @@
       
       <div class="features-grid">
         <div class="feature-card">
+          <div class="feature-icon">🚀</div>
+          <h3>In-App YouTube Downloader</h3>
+          <p>Search YouTube and YT Music without leaving the player. Pick any result, choose your format and quality, and it lands in your library within seconds — powered by an embedded yt-dlp engine with up to three parallel downloads at once.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>Paste a Link, Get the Music</h3>
+          <p>Drop any YouTube song or full playlist link into Settings and We Plays fetches every track for you. See exactly how many songs will be downloaded, watch live per-song progress, and let the built-in queue handle the rest — even for hundred-track playlists.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎚️</div>
+          <h3>Your Format, Your Quality</h3>
+          <p>Every download is converted by FFmpeg to the format you choose — MP3, lossless FLAC, AAC, or OGG — at bitrates from 128 up to 320 kbps, with album artwork and full ID3 metadata tags embedded automatically.</p>
+        </div>
+        <div class="feature-card">
           <div class="feature-icon">🎨</div>
           <h3>Dynamic Theme Engine</h3>
-          <p>The entire user interface automatically shifts its gradient colors dynamically to match the color palette of the album art of the currently playing song.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🚀</div>
-          <h3>In-App Downloader</h3>
-          <p>Search and download any track or playlist from YouTube and YT Music directly within the player, powered by a high-speed embedded yt-dlp engine.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>Listening Insights</h3>
-          <p>Gain access to rich personal analytics. Track your top songs, favorite artists, listening hour distributions, and total playtime dashboard.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📶</div>
-          <h3>LAN Media Sharing</h3>
-          <p>Broadcast your local offline library instantly. Share files with other devices on your local network without any configurations.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📍</div>
-          <h3>Audio Bookmarks</h3>
-          <p>Mark specific timestamps in podcasts, mixtapes, or songs to jump back to them instantly. Extremely useful for long audio files.</p>
+          <p>The interface repaints itself around your music. Gradient colors are extracted from the album art of the current song, so every track gives the whole app a matching mood.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🎤</div>
           <h3>Synchronized Lyrics</h3>
-          <p>Fetch and view real-time lyrics synchronized perfectly with your tracks to follow along and sing with your music.</p>
+          <p>Fetch real-time lyrics for the song you're playing and follow along line by line, perfectly in sync with the audio.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📚</div>
           <h3>Free LibriVox Audiobooks</h3>
-          <p>Browse, search, and listen to thousands of free public-domain audiobooks with a dedicated player — variable speed (0.5x–3x), sleep timer, chapter navigation, bookmarks, and offline downloads for on-the-go listening.</p>
+          <p>Browse thousands of free public-domain audiobooks in a dedicated player — variable speed (0.5x–3x), sleep timer, chapter navigation, resume-where-you-left-off, timestamp bookmarks, and offline chapter downloads.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Listening Insights</h3>
+          <p>A personal analytics dashboard built from your real listening history: top songs, favorite artists, hour-by-hour listening patterns, and total playtime.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🗂️</div>
+          <h3>Playlists &amp; Smart Library</h3>
+          <p>Create playlists, drag to reorder the queue, mark favorites, and rate songs. Import your existing music by dropping files or whole folders onto the window — tags, duration, and album info are read automatically.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧹</div>
+          <h3>One-Click Library Cleaner</h3>
+          <p>A single scan finds duplicate songs, duplicate playlists, and entries whose files have gone missing from disk — then lets you review and remove them safely with checkboxes, not guesswork.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⌨️</div>
+          <h3>Shortcuts &amp; Tray Control</h3>
+          <p>Control everything from the keyboard — play/pause, next, shuffle, repeat, volume, search — and keep the music going from the system tray with a live play/pause indicator when the window is closed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3>Always Up to Date</h3>
+          <p>One-click updates for the app itself, plus built-in updaters for yt-dlp and FFmpeg — so downloads keep working even when YouTube changes things behind the scenes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📴</div>
+          <h3>Truly Offline</h3>
+          <p>Everything you download is a real audio file on your own disk, organized in a local SQLite library. No streaming, no subscription, no internet needed to play your music.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="features" id="how-it-works" style="padding-top: 0;">
+    <div class="section-container">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">From a link to a fully tagged offline library in four steps — no accounts, no configuration.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">1️⃣</div>
+          <h3>Install &amp; Open</h3>
+          <p>Run the Windows installer. yt-dlp, FFmpeg, and the local database are bundled inside, so the app is fully working the moment it opens.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">2️⃣</div>
+          <h3>Search or Paste a Link</h3>
+          <p>Search any song inside the app, or paste a YouTube song or playlist link in Settings. We Plays lists every track it found and tells you exactly how many will be downloaded.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">3️⃣</div>
+          <h3>Choose Quality &amp; Folder</h3>
+          <p>Pick MP3, FLAC, AAC, or OGG, set the bitrate up to 320 kbps, and choose where the files are saved. yt-dlp grabs the audio and FFmpeg converts it, embedding artwork and metadata tags.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">4️⃣</div>
+          <h3>Play — Forever, Offline</h3>
+          <p>Finished downloads appear in your library instantly, with live progress while they run. From there it's all yours: playlists, lyrics, stats, and playback that never needs the internet again.</p>
         </div>
       </div>
     </div>
