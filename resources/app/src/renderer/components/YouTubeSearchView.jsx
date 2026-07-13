@@ -230,16 +230,16 @@ export default function YouTubeSearchView({ onDownloadTrigger }) {
         gap: 12
       }}>
         <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '0.03em', textTransform: 'uppercase', opacity: 0.9 }}>
-          <span style={{ fontSize: 14 }}>💡</span> Quick Guide / कैसे इस्तेमाल करें?
+          <span style={{ fontSize: 14 }}>💡</span> Quick Guide
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
           {/* Step 1 */}
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', flexShrink: 0, color: '#ff0000', fontWeight: 'bold', fontSize: 12 }}>1</div>
             <div>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Search / Paste (खोजें या पेस्ट करें)</p>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Search / Paste</p>
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#b3b3b3', lineHeight: 1.4 }}>
-                Search box me gaane ka naam ya keyword likhein, ya video link paste karke Enter dabayein.
+                Type a song name, keyword, or paste a video link into the search box and press Enter.
               </p>
             </div>
           </div>
@@ -247,9 +247,9 @@ export default function YouTubeSearchView({ onDownloadTrigger }) {
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', flexShrink: 0, color: '#1db954', fontWeight: 'bold', fontSize: 12 }}>2</div>
             <div>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Download (गाना डाउनलोड करें)</p>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Download Song</p>
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#b3b3b3', lineHeight: 1.4 }}>
-                Search results aane par gaane ke aage diye gaye Green Download button par click karein.
+                Click the green download button next to any search result to download it.
               </p>
             </div>
           </div>
@@ -257,9 +257,9 @@ export default function YouTubeSearchView({ onDownloadTrigger }) {
           <div style={{ display: 'flex', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', flexShrink: 0, color: '#3b82f6', fontWeight: 'bold', fontSize: 12 }}>3</div>
             <div>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Save to Playlist (प्लेलिस्ट में जोड़ें)</p>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#fff' }}>Save to Playlist</p>
               <p style={{ margin: '4px 0 0', fontSize: 11, color: '#b3b3b3', lineHeight: 1.4 }}>
-                Download menu me <b>"Add to Playlist"</b> dropdown se apni playlist select karein, gaana wahan save ho jayega.
+                Choose the <b>"Add to Playlist"</b> option in the download modal to save the song directly.
               </p>
             </div>
           </div>
