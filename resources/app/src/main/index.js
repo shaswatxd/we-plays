@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog, protocol, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog, protocol, nativeImage, Menu, MenuItem } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const { initDatabase } = require('./library');
@@ -57,6 +57,23 @@ function createWindow() {
 
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message}`);
+  });
+
+  // Context menu handler for input fields and text selection
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const menu = new Menu();
+
+    if (params.isEditable) {
+      menu.append(new MenuItem({ label: 'Cut', role: 'cut' }));
+      menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
+      menu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ label: 'Select All', role: 'selectall' }));
+      menu.popup(mainWindow);
+    } else if (params.selectionText && params.selectionText.trim() !== '') {
+      menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
+      menu.popup(mainWindow);
+    }
   });
 
   mainWindow.once('ready-to-show', () => {
